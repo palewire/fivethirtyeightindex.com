@@ -75,21 +75,29 @@ class EnrichResult:
     error: str = ""
 
 
+# Kinds where a missing byline is most likely an extractor miss rather
+# than a legitimately authorless entry (liveblogs were staff-authored,
+# project landings rarely credit individuals).
+_BYLINE_RESCRAPE_KINDS: frozenset[str] = frozenset({"article", "video", "methodology"})
+
+
 def rescrape_bylines(
     *,
     enriched_path: Path = ENRICHED_FILE,
     workers: int = 4,
     delay: float = 1.0,
     limit: int | None = None,
+    kinds: frozenset[str] = _BYLINE_RESCRAPE_KINDS,
 ) -> tuple[int, int]:
     """Re-fetch rows whose byline is empty and re-extract metadata.
 
     Only updates the byline column when the new extractor produces a
     non-empty value. Returns (refetched_count, recovered_count).
 
-    Run this after improving metadata.extract — most useful for the
-    2008-2010 Blogspot-era posts whose byline pattern wasn't covered
-    by the original extractor.
+    Targets the kinds in ``kinds`` (default: article, video, methodology)
+    where a missing byline likely means the extractor missed an existing
+    one. Liveblog + project entries are skipped because they're usually
+    legitimately authorless.
     """
     if not enriched_path.exists():
         msg = f"enriched file not found: {enriched_path}. Run `enrich` first."
@@ -109,6 +117,8 @@ def rescrape_bylines(
             if row.get("error"):
                 continue
             if row.get("byline"):
+                continue
+            if (row.get("kind") or "") not in kinds:
                 continue
             url = row.get("url") or ""
             ts = row.get("snapshot_timestamp") or ""

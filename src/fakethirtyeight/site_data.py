@@ -171,9 +171,7 @@ def build(
     # one entry per year, one entry per byline slug.
     _write_sitemap(records)
 
-    log.info(
-        "wrote %d records to %s and %s", len(records), out_path, csv_out_path
-    )
+    log.info("wrote %d records to %s and %s", len(records), out_path, csv_out_path)
     return len(records)
 
 
@@ -333,9 +331,7 @@ def iter_byline_slugs(records: Iterable[SiteRecord]) -> dict[str, list[str]]:
     return out
 
 
-def _write_sitemap(
-    records: list[SiteRecord], out_path: Path = SITEMAP_FILE
-) -> None:
+def _write_sitemap(records: list[SiteRecord], out_path: Path = SITEMAP_FILE) -> None:
     """Emit a flat sitemap.xml listing every prerendered route."""
     years: set[int] = set()
     bylines: set[str] = set()

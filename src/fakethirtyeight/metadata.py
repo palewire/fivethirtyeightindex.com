@@ -132,9 +132,7 @@ _TITLE_EDGE_PUNCT = re.compile(r"^[|:\-–—\s]+|[|:\-–—\s]+$")
 
 #: Strings that should be treated as "no title" if they're all that's left
 #: after suffix/prefix/edge cleanup. These are the bare site identifications.
-_BARE_SITE_NAMES: frozenset[str] = frozenset(
-    {"fivethirtyeight", "fivethirtyeight.com"}
-)
+_BARE_SITE_NAMES: frozenset[str] = frozenset({"fivethirtyeight", "fivethirtyeight.com"})
 
 
 def _clean_title(raw: str) -> str:

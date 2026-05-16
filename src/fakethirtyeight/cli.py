@@ -166,9 +166,7 @@ def rescrape_bylines(workers: int, delay: float, limit: int | None) -> None:
     total, recovered = enrich_mod.rescrape_bylines(
         workers=workers, delay=delay, limit=limit
     )
-    click.echo(
-        f"rescraped {total:,} rows, recovered {recovered:,} byline(s)"
-    )
+    click.echo(f"rescraped {total:,} rows, recovered {recovered:,} byline(s)")
 
 
 @cli.command()

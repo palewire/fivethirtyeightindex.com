@@ -47,9 +47,7 @@ def test_extract_title_strips_leftover_edge_separators():
 
 
 def test_extract_title_strips_blogspot_era_prefix():
-    html = (
-        b"<html><head><title>FiveThirtyEight.com: Politics Done Right: Live from Invesco</title></head></html>"
-    )
+    html = b"<html><head><title>FiveThirtyEight.com: Politics Done Right: Live from Invesco</title></head></html>"
     md = extract(html)
     assert md.title == "Live from Invesco"
 
