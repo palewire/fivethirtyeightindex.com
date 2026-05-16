@@ -1,13 +1,16 @@
-/* HN-inspired minimal stylesheet. Verdana + cream + dense rows. */
+/* Palette + typography from palewi.re — Libre Franklin, black-on-white,
+   gray links, #e5e5e5 rules. Layout structure unchanged from the HN-style
+   skeleton: a numbered list of entries with a meta line under each. */
+
+@import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,300;0,400;0,700;0,800;1,400&display=swap');
 
 :root {
-	--bg: #f6f6ef;
-	--bg-header: #ff6600;
-	--fg: #000;
-	--fg-meta: #828282;
-	--fg-link: #000080;
-	--fg-visited: #555;
-	--rule: #e0e0d8;
+	--bg: #ffffff;
+	--fg: #000000;
+	--fg-meta: #686868;
+	--fg-link: #686868;
+	--fg-link-hover: #000000;
+	--rule: #e5e5e5;
 }
 
 * {
@@ -20,9 +23,18 @@ body {
 	padding: 0;
 	background: var(--bg);
 	color: var(--fg);
-	font-family: Verdana, Geneva, sans-serif;
-	font-size: 10pt;
-	line-height: 1.4;
+	font-family: 'Libre Franklin', 'Helvetica', 'Liberation Sans', Arial, sans-serif;
+	font-size: 20px;
+	line-height: 1.55;
+	font-weight: 300;
+	text-align: left;
+}
+
+@media (max-width: 550px) {
+	html,
+	body {
+		font-size: 0.85em;
+	}
 }
 
 a {
@@ -31,106 +43,149 @@ a {
 }
 
 a:visited {
-	color: var(--fg-visited);
+	color: var(--fg-link);
 }
 
 a:hover {
 	text-decoration: underline;
 }
 
+a:active {
+	color: var(--fg-link-hover);
+	text-decoration: underline;
+}
+
 .page {
-	max-width: 80em;
+	max-width: 755px;
 	margin: 0 auto;
-	padding: 0 0.75rem 2rem;
+	padding: 0 20px 2rem;
 }
 
+/* Header bar — keeps the layout (brand + nav) but adopts palewi.re's
+   clean 10px gray bottom rule instead of the HN orange band. */
 .site-header {
-	background: var(--bg-header);
-	padding: 0.35rem 0.75rem;
-	margin: 0 -0.75rem 1rem;
-	font-size: 11pt;
-}
-
-.site-header a,
-.site-header a:visited {
-	color: #000;
+	margin: 0;
+	padding: 0.75em 0 0.5em;
+	border-bottom: 10px solid var(--rule);
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.75em;
+	margin-bottom: 1.25rem;
 }
 
 .site-header strong {
-	font-weight: bold;
-	margin-right: 0.5rem;
+	font-size: 1.7em;
+	font-weight: 800;
+	flex: 1 1 auto;
+}
+
+.site-header strong a,
+.site-header strong a:visited {
+	color: var(--fg);
+	font-weight: 800;
+}
+
+.site-header strong a:hover {
+	color: var(--fg-link);
+	text-decoration: none;
 }
 
 .site-header nav {
-	display: inline;
+	font-size: 0.9em;
+	font-weight: 400;
 }
 
 .site-header nav a {
-	margin-right: 0.5rem;
+	margin-left: 0.75em;
 }
 
 .tagline {
 	color: var(--fg-meta);
-	margin-bottom: 1rem;
-	font-size: 10pt;
+	font-weight: 300;
+	margin: 0 0 1.25rem;
 }
 
+/* Search box + filters */
 .search {
-	margin-bottom: 1rem;
+	margin-bottom: 1.25rem;
 }
 
 .search input[type='search'] {
 	width: 100%;
 	max-width: 32rem;
-	padding: 0.3rem 0.4rem;
+	padding: 0.4em 0.5em;
 	font: inherit;
-	border: 1px solid #999;
+	border: 1px solid var(--rule);
 	background: #fff;
 }
 
+.search input[type='search']:focus {
+	outline: none;
+	border-color: var(--fg);
+}
+
 .search .filters {
-	margin-top: 0.4rem;
+	margin-top: 0.5em;
 	color: var(--fg-meta);
+	font-size: 0.8em;
 }
 
 .search .filters label {
-	margin-right: 0.75rem;
+	margin-right: 0.75em;
 	cursor: pointer;
 }
 
 .search .filters input[type='checkbox'] {
-	margin-right: 0.2rem;
+	margin-right: 0.25em;
 	vertical-align: middle;
 }
 
+/* Entries list — numbered, dense, with a small gray meta line. */
 .entries {
 	list-style: none;
 	padding: 0;
-	margin: 0 0 1.25rem;
+	margin: 0 0 1.5rem;
 	counter-reset: entry;
 }
 
 .entries li {
-	padding: 0.15rem 0 0.15rem 2rem;
+	padding: 0.45em 0 0.45em 2.4em;
 	position: relative;
 	counter-increment: entry;
-	border-bottom: 1px dotted var(--rule);
+	border-bottom: 1px solid var(--rule);
 }
 
 .entries li::before {
 	content: counter(entry) '.';
 	position: absolute;
 	left: 0;
-	top: 0.15rem;
-	color: var(--fg-meta);
+	top: 0.45em;
+	width: 2em;
 	text-align: right;
-	width: 1.6rem;
+	color: var(--fg-meta);
+	font-variant-numeric: tabular-nums;
+	font-weight: 400;
+}
+
+.entries li > a {
+	font-weight: 400;
+	color: var(--fg);
+}
+
+.entries li > a:visited {
+	color: var(--fg-meta);
+}
+
+.entries li > a:hover {
+	text-decoration: underline;
 }
 
 .entries .meta {
 	color: var(--fg-meta);
-	font-size: 8.5pt;
-	margin-top: 0.05rem;
+	font-size: 0.7em;
+	margin-top: 0.1em;
+	line-height: 1.4;
 }
 
 .entries .meta a {
@@ -138,7 +193,7 @@ a:hover {
 }
 
 .entries .meta a:hover {
-	color: var(--fg-link);
+	color: var(--fg);
 }
 
 .entries .kind {
@@ -146,32 +201,35 @@ a:hover {
 }
 
 .section-heading {
-	margin: 1.5rem 0 0.4rem;
-	padding-bottom: 0.2rem;
-	border-bottom: 1px solid #ccc;
-	font-size: 11pt;
+	margin: 1.75em 0 0.4em;
+	padding-bottom: 0.2em;
+	border-bottom: 2px solid var(--rule);
+	font-size: 1.15em;
+	font-weight: 700;
 }
 
 .browse-block {
-	margin-bottom: 1.25rem;
+	margin-bottom: 1.5rem;
+	line-height: 1.7;
 }
 
 .browse-block .browse-list a {
-	margin-right: 0.5rem;
+	margin-right: 0.6em;
 	white-space: nowrap;
 }
 
 .browse-block .count {
 	color: var(--fg-meta);
-	font-size: 8.5pt;
+	font-size: 0.8em;
 }
 
 footer {
 	margin-top: 2rem;
-	padding-top: 0.75rem;
-	border-top: 1px solid #ccc;
+	padding-top: 0.5em;
+	border-top: 2px solid var(--rule);
 	color: var(--fg-meta);
-	font-size: 8.5pt;
+	font-size: 0.8em;
+	font-weight: 300;
 }
 
 footer a {
@@ -179,25 +237,15 @@ footer a {
 }
 
 footer a:hover {
-	color: var(--fg-link);
+	color: var(--fg);
 }
 
 .muted {
 	color: var(--fg-meta);
+	font-size: 0.85em;
 }
 
 .no-results {
 	padding: 1rem 0;
 	color: var(--fg-meta);
-}
-
-@media (max-width: 480px) {
-	html,
-	body {
-		font-size: 11pt;
-	}
-
-	.entries li {
-		padding-left: 1.8rem;
-	}
 }
