@@ -1,5 +1,5 @@
 # Mark all the commands that don't have a target
-.PHONY: help test lint fix format install type-check build clean build-docs serve-docs site-data site-install site-dev site-build
+.PHONY: help test lint fix format install type-check build clean site-data site-install site-dev site-build
 .DEFAULT_GOAL := help
 
 #
@@ -106,17 +106,6 @@ clean: ## Remove build artifacts
 	rm -rf dist/ build/ *.egg-info .pytest_cache .ruff_cache
 	find . -type d -name __pycache__ -exec rm -rf {} +
 
-build-docs: ## Build the docs
-	$(call banner,  📚 Building docs 📚)
-	@rm -rf _build/
-	@rm -rf docs/_build
-	@cd docs && $(UV) make html
-
-serve-docs: ## Test the site
-	$(call banner,  🧪 Serving test site 🧪)
-	@rm -rf _build/
-	@rm -rf docs/_build
-	@cd docs && $(UV) make livehtml
 
 site-data: ## Build web/static/data/articles.json from curated.csv + enriched.csv
 	$(call banner,  📦 Building site data 📦)

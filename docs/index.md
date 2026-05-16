@@ -1,3 +1,0 @@
-# Your package name
-
-Your documentation starts here ...
