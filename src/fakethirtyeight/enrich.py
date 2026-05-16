@@ -17,6 +17,7 @@ import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 from tenacity import (
@@ -27,6 +28,7 @@ from tenacity import (
 )
 from tqdm.contrib.concurrent import thread_map
 
+from fakethirtyeight.classify import classify
 from fakethirtyeight.curate import CURATED_FILE
 from fakethirtyeight.http import make_client
 from fakethirtyeight.metadata import Metadata, extract
@@ -275,15 +277,55 @@ def _iter_targets(
 
 
 def _load_done(out_path: Path) -> set[str]:
-    if not out_path.exists():
-        return set()
-    done: set[str] = set()
-    with out_path.open(newline="", encoding="utf-8") as fh:
+    return set(load_enriched(out_path).keys())
+
+
+def _current_rollup_key(url: str, fallback: str) -> str:
+    """Re-derive the rollup key for a URL using the current classifier.
+
+    Falls back to the stored value when the URL won't parse — should be rare
+    but keeps callers from losing rows on malformed input.
+    """
+    if not url:
+        return fallback
+    try:
+        host = urlparse(url).hostname or ""
+    except ValueError:
+        return fallback
+    return classify(url, host=host).rollup_key or fallback
+
+
+def _enrichment_quality(row: dict[str, str]) -> tuple[int, bool]:
+    """Sort key for picking between rows that collapse to the same key."""
+    fields_filled = sum(1 for k in ("title", "byline", "published_at") if row.get(k))
+    prefer_features = "/features/" in (row.get("url") or "")
+    return (fields_filled, prefer_features)
+
+
+def load_enriched(path: Path) -> dict[str, dict[str, str]]:
+    """Read ``enriched.csv`` keyed by the *current* rollup_key.
+
+    Each row's ``rollup_key`` is re-derived from its URL using the live
+    classifier, so changes to classification rules (e.g. merging features/
+    and datalab/ slugs) don't strand existing enrichment data. When multiple
+    historical rows collapse to the same current key, the row with the most
+    complete metadata wins, tie-breaking toward ``/features/`` URLs.
+    """
+    if not path.exists():
+        return {}
+    out: dict[str, dict[str, str]] = {}
+    with path.open(newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
-            rk = row.get("rollup_key") or ""
-            if rk:
-                done.add(rk)
-    return done
+            key = _current_rollup_key(row.get("url") or "", row.get("rollup_key") or "")
+            if not key:
+                continue
+            row["rollup_key"] = key
+            existing = out.get(key)
+            if existing is None or _enrichment_quality(row) > _enrichment_quality(
+                existing
+            ):
+                out[key] = row
+    return out
 
 
 def _fetch_and_extract(

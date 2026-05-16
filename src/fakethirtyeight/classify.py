@@ -166,22 +166,18 @@ def classify(url: str, host: str | None = None) -> Classification:
                 return Classification(KIND_LIVEBLOG, f"liveblog:{segs[1]}")
             return Classification(KIND_LIVEBLOG, "liveblog:")
 
-        # Features articles
-        if first == "features":
+        # Features + DataLab era articles share slugs; roll up together.
+        if first in {"features", "datalab"}:
             if len(segs) == 2:
-                return Classification(KIND_ARTICLE, f"article:features/{segs[1]}")
+                return Classification(KIND_ARTICLE, f"article:{segs[1]}")
             # /features/<slug>/comment-page-N/ → paginated
             if _COMMENT_PAGE.search(path):
                 return Classification(KIND_PAGINATED, f"paginated:{path}")
             # /features (landing index)
-            if len(segs) == 1:
+            if len(segs) == 1 and first == "features":
                 return Classification(KIND_SECTION, "section:features")
             # Anything deeper that isn't comments is "other" noise
             return Classification(KIND_OTHER, f"other:{path}")
-
-        # DataLab era articles
-        if first == "datalab" and len(segs) == 2:
-            return Classification(KIND_ARTICLE, f"article:datalab/{segs[1]}")
 
         # Pre-`projects.fivethirtyeight.com` interactive projects lived at
         # `/interactives/<slug>/` (and were paginated for archive views,

@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from fakethirtyeight.curate import CURATED_FILE
-from fakethirtyeight.enrich import ENRICHED_FILE
+from fakethirtyeight.enrich import ENRICHED_FILE, load_enriched
 from fakethirtyeight.metadata import _clean_title
 
 log = logging.getLogger(__name__)
@@ -132,7 +132,7 @@ def build(
         msg = f"enriched file not found: {enriched_path}. Run `enrich` first."
         raise FileNotFoundError(msg)
 
-    enriched_by_id = _load_enriched(enriched_path)
+    enriched_by_id = load_enriched(enriched_path)
     records: list[SiteRecord] = []
 
     with curated_path.open(newline="", encoding="utf-8") as fh:
@@ -189,16 +189,6 @@ def build(
 
     log.info("wrote %d records to %s and %s", len(records), out_path, csv_out_path)
     return len(records)
-
-
-def _load_enriched(path: Path) -> dict[str, dict[str, str]]:
-    out: dict[str, dict[str, str]] = {}
-    with path.open(newline="", encoding="utf-8") as fh:
-        for row in csv.DictReader(fh):
-            rid = row.get("rollup_key") or ""
-            if rid:
-                out[rid] = row
-    return out
 
 
 def _build_record(
