@@ -47,7 +47,7 @@
 </script>
 
 <svelte:head>
-	<title>fivethirtyeightindex.com</title>
+	<title>fivethirtyeightindex</title>
 </svelte:head>
 
 <Tagline total={data.total} />

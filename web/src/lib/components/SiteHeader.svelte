@@ -3,9 +3,5 @@
 </script>
 
 <header class="site-header">
-	<strong><a href="{base}/">fakethirtyeight</a></strong>
-	<nav>
-		<a href="{base}/">index</a>
-		<a href="{base}/byline/">bylines</a>
-	</nav>
+	<strong><a href="{base}/">fivethirtyeightindex</a></strong>
 </header>
