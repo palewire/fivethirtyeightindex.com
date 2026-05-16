@@ -32,16 +32,16 @@ KIND_ARCHIVE = "archive"
 KIND_OTHER = "other"
 
 #: kinds that belong in the curated "editorial corpus" output.
+#: Section landings and the homepage are intentionally excluded — they're
+#: navigational, not editorial, and shift over time.
 EDITORIAL_KINDS: frozenset[str] = frozenset(
     {
         KIND_ARTICLE,
         KIND_LIVEBLOG,
         KIND_PROJECT,
-        KIND_SECTION,
         KIND_PODCAST,
         KIND_VIDEO,
         KIND_METHODOLOGY,
-        KIND_HOMEPAGE,
     }
 )
 

@@ -1,0 +1,10 @@
+node_modules/
+.svelte-kit/
+build/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+# The data file is a build artifact; regenerate with `make site-data`.
+static/data/articles.json

@@ -1,0 +1,81 @@
+name: Deploy site to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'src/fakethirtyeight/site_data.py'
+      - '.github/workflows/site.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install Python project
+        run: uv sync --all-extras
+
+      # The data CSVs are not in the repo. For now we rely on artifacts that
+      # the maintainer has produced locally and uploaded as a release attachment
+      # (or hosted as a Pages artifact). Fall back to an empty articles.json
+      # so the site builds even before the first data drop.
+      - name: Ensure data file exists
+        run: |
+          mkdir -p web/static/data
+          if [ ! -f web/static/data/articles.json ]; then
+            echo "[]" > web/static/data/articles.json
+            echo "WARNING: shipping empty articles.json — supply data/enriched.csv and data/curated.csv to populate."
+          fi
+
+      - name: Build site
+        run: npm run build
+        working-directory: web
+        env:
+          NODE_ENV: production
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

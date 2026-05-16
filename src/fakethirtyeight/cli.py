@@ -11,8 +11,10 @@ from fakethirtyeight import __version__
 from fakethirtyeight import crawl as crawl_mod
 from fakethirtyeight import curate as curate_mod
 from fakethirtyeight import duplicates as duplicates_mod
+from fakethirtyeight import enrich as enrich_mod
 from fakethirtyeight import export as export_mod
 from fakethirtyeight import merge as merge_mod
+from fakethirtyeight import site_data as site_data_mod
 from fakethirtyeight import sitemaps as sitemaps_mod
 from fakethirtyeight import stats as stats_mod
 from fakethirtyeight.paths import INDEX_FILE, STATE_FILE
@@ -120,6 +122,34 @@ def stats(top: int) -> None:
     """Print summary statistics over the merged index."""
     summary = stats_mod.summarize()
     click.echo(stats_mod.format_text(summary, top=top))
+
+
+@cli.command("build-site-data")
+def build_site_data() -> None:
+    """Build web/static/data/articles.json from curated + enriched CSVs."""
+    n = site_data_mod.build()
+    click.echo(f"wrote {n:,} records to {site_data_mod.SITE_DATA_FILE}")
+
+
+@cli.command()
+@click.option("--workers", type=int, default=4, show_default=True)
+@click.option(
+    "--delay",
+    type=float,
+    default=1.0,
+    show_default=True,
+    help="Polite per-worker delay (seconds).",
+)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap total URLs to enrich (smoke testing).",
+)
+def enrich(workers: int, delay: float, limit: int | None) -> None:
+    """Fetch each curated URL's snapshot and extract title/byline/published_at."""
+    n = enrich_mod.enrich(workers=workers, delay=delay, limit=limit)
+    click.echo(f"enriched {n:,} rows → {enrich_mod.ENRICHED_FILE}")
 
 
 @cli.command()

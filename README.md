@@ -74,6 +74,25 @@ fakethirtyeight export --format parquet --out data/index.parquet   # needs pyarr
 
 Every CDX page boundary persists progress to `data/state.json`. Interrupt with `Ctrl-C` and re-run `fakethirtyeight crawl` — each shard picks up from its last resume key. Already-completed shards are skipped.
 
+## Frontend (SvelteKit static site)
+
+A read-only browse + search UI lives in [`web/`](./web/). It loads
+`web/static/data/articles.json` (generated from the enriched CSVs) and
+renders a Hacker News–style index with date/byline navigation and
+client-side search.
+
+```bash
+make site-install        # one-time: npm install in web/
+make site-data           # build articles.json from data/enriched.csv + data/curated.csv
+make site-dev            # run the SvelteKit dev server
+make site-build          # produce the static build in web/build/
+```
+
+The site deploys to GitHub Pages on every push to `main` via
+[.github/workflows/site.yaml](.github/workflows/site.yaml). It expects
+to live at `https://palewire.github.io/fakethirtyeight.com/` — base path
+configured in [`web/svelte.config.js`](web/svelte.config.js).
+
 ## Develop
 
 ```bash

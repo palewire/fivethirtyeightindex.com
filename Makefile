@@ -1,5 +1,5 @@
 # Mark all the commands that don't have a target
-.PHONY: help test lint fix format install type-check build clean build-docs serve-docs
+.PHONY: help test lint fix format install type-check build clean build-docs serve-docs site-data site-install site-dev site-build
 .DEFAULT_GOAL := help
 
 #
@@ -117,3 +117,19 @@ serve-docs: ## Test the site
 	@rm -rf _build/
 	@rm -rf docs/_build
 	@cd docs && $(UV) make livehtml
+
+site-data: ## Build web/static/data/articles.json from curated.csv + enriched.csv
+	$(call banner,  📦 Building site data 📦)
+	uv run fakethirtyeight build-site-data
+
+site-install: ## Install web/ npm dependencies
+	$(call banner,  ⚙️  Installing web dependencies ⚙️ )
+	cd web && npm install
+
+site-dev: ## Run the SvelteKit dev server (npm run dev)
+	$(call banner,  🌐 Running SvelteKit dev server 🌐)
+	cd web && npm run dev
+
+site-build: ## Build the static site (npm run build)
+	$(call banner,  🏗️  Building static site 🏗️ )
+	cd web && npm run build
