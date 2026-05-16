@@ -31,13 +31,13 @@ CASES: list[tuple[str, str, str]] = [
     (
         "https://fivethirtyeight.com/features/the-real-mvp-of-the-finals/",
         KIND_ARTICLE,
-        "article:features/the-real-mvp-of-the-finals",
+        "article:the-real-mvp-of-the-finals",
     ),
     # DataLab era article
     (
         "https://fivethirtyeight.com/datalab/why-this-poll-matters/",
         KIND_ARTICLE,
-        "article:datalab/why-this-poll-matters",
+        "article:why-this-poll-matters",
     ),
     # Features comment pagination should be paginated, not article
     (
