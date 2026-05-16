@@ -148,21 +148,26 @@ def _build_record(
     kind = curated_row.get("kind") or ""
     url = curated_row.get("url") or ""
 
+    # Always link to the EARLIEST snapshot we know of (curated.first_seen_ts).
+    # The article's metadata is identical across captures, but the earliest
+    # snapshot is closer to "how the site actually looked then" and avoids
+    # linking 2015 articles to 2024 mementos captured during the site's
+    # final months. Falls back to last_seen_ts when first is missing.
+    earliest_ts = (
+        curated_row.get("first_seen_ts") or curated_row.get("last_seen_ts") or ""
+    )
+    wayback_url = _build_wayback_url(earliest_ts, url) if earliest_ts else ""
+
     if enrich_row:
         # Re-clean titles to apply any extractor improvements that landed
         # after enrich.csv was written (e.g., Blogspot-era prefix stripping).
         title = _clean_title(enrich_row.get("title") or "")
         byline = enrich_row.get("byline") or ""
         date = enrich_row.get("published_at") or ""
-        wayback_url = enrich_row.get("wayback_url") or ""
     else:
         title = ""
         byline = ""
-        date = curated_row.get("last_seen_ts") or curated_row.get("first_seen_ts") or ""
-        wayback_url = _build_wayback_url(
-            curated_row.get("last_seen_ts") or curated_row.get("first_seen_ts") or "",
-            url,
-        )
+        date = earliest_ts
 
     # Fall back to a slug-derived title when we couldn't extract one.
     if not title:

@@ -1,17 +1,53 @@
-/* Palette + typography from palewi.re — Libre Franklin, black-on-white,
-   gray links, #e5e5e5 rules. Layout structure unchanged from the HN-style
-   skeleton: a numbered list of entries with a meta line under each. */
+/* ─── Design tokens ──────────────────────────────────────────────────────
+   Edit these to retheme the whole site. Colors, typography, and spacing
+   are all expressed in terms of these :root custom properties.
+*/
 
 @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,300;0,400;0,700;0,800;1,400&display=swap');
 
 :root {
-	--bg: #ffffff;
-	--fg: #000000;
-	--fg-meta: #686868;
-	--fg-link: #686868;
-	--fg-link-hover: #000000;
-	--rule: #e5e5e5;
+	/* Palette (palewi.re — black on white, gray accents). */
+	--color-bg: #ffffff;
+	--color-fg: #000000;
+	--color-muted: #686868;
+	--color-link: #686868;
+	--color-link-hover: #000000;
+	--color-rule: #e5e5e5;
+
+	/* Typography. */
+	--font-stack: 'Libre Franklin', 'Helvetica', 'Liberation Sans', Arial, sans-serif;
+	--font-size-base: 20px;
+	--font-size-table: 0.8em; /* roughly 16px against base */
+	--font-size-meta: 0.7em;
+	--font-size-small: 0.8em;
+	--font-size-heading: 1.15em;
+	--font-size-brand: 1.7em;
+	--font-weight-light: 300;
+	--font-weight-regular: 400;
+	--font-weight-bold: 700;
+	--font-weight-display: 800;
+	--line-height-body: 1.55;
+	--line-height-tight: 1.4;
+
+	/* Layout. */
+	--page-max-width: 1200px;
+	--page-pad-x: 20px;
+	--narrow-breakpoint: 640px;
+
+	/* Spacing scale (used for margins/padding). */
+	--space-xs: 0.18em;
+	--space-sm: 0.4em;
+	--space-md: 0.75em;
+	--space-lg: 1.25rem;
+	--space-xl: 2rem;
+
+	/* Rules. */
+	--rule-thin: 1px solid var(--color-rule);
+	--rule-thick: 2px solid var(--color-rule);
+	--rule-header: 10px solid var(--color-rule);
 }
+
+/* ─── Reset + body ──────────────────────────────────────────────────── */
 
 * {
 	box-sizing: border-box;
@@ -21,12 +57,12 @@ html,
 body {
 	margin: 0;
 	padding: 0;
-	background: var(--bg);
-	color: var(--fg);
-	font-family: 'Libre Franklin', 'Helvetica', 'Liberation Sans', Arial, sans-serif;
-	font-size: 20px;
-	line-height: 1.55;
-	font-weight: 300;
+	background: var(--color-bg);
+	color: var(--color-fg);
+	font-family: var(--font-stack);
+	font-size: var(--font-size-base);
+	font-weight: var(--font-weight-light);
+	line-height: var(--line-height-body);
 	text-align: left;
 }
 
@@ -38,12 +74,12 @@ body {
 }
 
 a {
-	color: var(--fg-link);
+	color: var(--color-link);
 	text-decoration: none;
 }
 
 a:visited {
-	color: var(--fg-link);
+	color: var(--color-link);
 }
 
 a:hover {
@@ -51,88 +87,90 @@ a:hover {
 }
 
 a:active {
-	color: var(--fg-link-hover);
+	color: var(--color-link-hover);
 	text-decoration: underline;
 }
 
 .page {
-	max-width: 1200px;
+	max-width: var(--page-max-width);
 	margin: 0 auto;
-	padding: 0 20px 2rem;
+	padding: 0 var(--page-pad-x) var(--space-xl);
 }
 
-/* Header bar — keeps the layout (brand + nav) but adopts palewi.re's
-   clean 10px gray bottom rule instead of the HN orange band. */
+/* ─── Header ────────────────────────────────────────────────────────── */
+
 .site-header {
-	margin: 0;
-	padding: 0.75em 0 0.5em;
-	border-bottom: 10px solid var(--rule);
+	margin: 0 0 var(--space-lg);
+	padding: var(--space-md) 0 var(--space-sm);
+	border-bottom: var(--rule-header);
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
-	gap: 0.75em;
-	margin-bottom: 1.25rem;
+	gap: var(--space-md);
 }
 
 .site-header strong {
-	font-size: 1.7em;
-	font-weight: 800;
+	font-size: var(--font-size-brand);
+	font-weight: var(--font-weight-display);
 	flex: 1 1 auto;
 }
 
 .site-header strong a,
 .site-header strong a:visited {
-	color: var(--fg);
-	font-weight: 800;
+	color: var(--color-fg);
+	font-weight: var(--font-weight-display);
 }
 
 .site-header strong a:hover {
-	color: var(--fg-link);
+	color: var(--color-link);
 	text-decoration: none;
 }
 
 .site-header nav {
 	font-size: 0.9em;
-	font-weight: 400;
+	font-weight: var(--font-weight-regular);
 }
 
 .site-header nav a {
-	margin-left: 0.75em;
+	margin-left: var(--space-md);
 }
+
+/* ─── Tagline ───────────────────────────────────────────────────────── */
 
 .tagline {
-	color: var(--fg-meta);
-	font-weight: 300;
-	margin: 0 0 1.25rem;
+	color: var(--color-muted);
+	font-weight: var(--font-weight-light);
+	margin: 0 0 var(--space-lg);
 }
 
-/* Search box + filters */
+/* ─── Search ────────────────────────────────────────────────────────── */
+
 .search {
-	margin-bottom: 1.25rem;
+	margin-bottom: var(--space-lg);
 }
 
 .search input[type='search'] {
 	width: 100%;
 	max-width: 32rem;
-	padding: 0.4em 0.5em;
+	padding: var(--space-sm) 0.5em;
 	font: inherit;
-	border: 1px solid var(--rule);
-	background: #fff;
+	border: var(--rule-thin);
+	background: var(--color-bg);
 }
 
 .search input[type='search']:focus {
 	outline: none;
-	border-color: var(--fg);
+	border-color: var(--color-fg);
 }
 
 .search .filters {
-	margin-top: 0.5em;
-	color: var(--fg-meta);
-	font-size: 0.8em;
+	margin-top: var(--space-sm);
+	color: var(--color-muted);
+	font-size: var(--font-size-small);
 }
 
 .search .filters label {
-	margin-right: 0.75em;
+	margin-right: var(--space-md);
 	cursor: pointer;
 }
 
@@ -141,20 +179,20 @@ a:active {
 	vertical-align: middle;
 }
 
-/* Entries table — condensed, HN/baseball-reference style.
-   Three columns: date | headline | byline. No numbering. */
+/* ─── Entries table ─────────────────────────────────────────────────── */
+
 .entries {
 	width: 100%;
 	border-collapse: collapse;
-	margin: 0 0 1.5rem;
-	font-size: 0.8em; /* ≈16px against the 20px body */
-	line-height: 1.4;
+	margin: 0 0 var(--space-lg);
+	font-size: var(--font-size-table);
+	line-height: var(--line-height-tight);
 }
 
 .entries td {
-	padding: 0.18em 0.6em 0.18em 0;
+	padding: var(--space-xs) 0.6em var(--space-xs) 0;
 	vertical-align: top;
-	border-bottom: 1px solid var(--rule);
+	border-bottom: var(--rule-thin);
 }
 
 .entries td:last-child {
@@ -164,17 +202,17 @@ a:active {
 .entries .c-date {
 	white-space: nowrap;
 	font-variant-numeric: tabular-nums;
-	color: var(--fg-meta);
+	color: var(--color-muted);
 	width: 6.5em;
 }
 
 .entries .c-title a {
-	color: var(--fg);
-	font-weight: 400;
+	color: var(--color-fg);
+	font-weight: var(--font-weight-regular);
 }
 
 .entries .c-title a:visited {
-	color: var(--fg-meta);
+	color: var(--color-muted);
 }
 
 .entries .c-title a:hover {
@@ -184,12 +222,12 @@ a:active {
 .entries .c-kind {
 	font-style: italic;
 	font-size: 0.85em;
-	color: var(--fg-meta);
+	color: var(--color-muted);
 	margin-left: 0.25em;
 }
 
 .entries .c-byline {
-	color: var(--fg-meta);
+	color: var(--color-muted);
 	white-space: nowrap;
 	max-width: 22em;
 	overflow: hidden;
@@ -198,15 +236,14 @@ a:active {
 }
 
 .entries .c-byline a {
-	color: var(--fg-meta);
+	color: var(--color-muted);
 }
 
 .entries .c-byline a:hover {
-	color: var(--fg);
+	color: var(--color-fg);
 }
 
 @media (max-width: 640px) {
-	/* On narrow screens, stack each row's cells into a tighter card. */
 	.entries,
 	.entries tbody,
 	.entries tr,
@@ -216,8 +253,8 @@ a:active {
 	}
 
 	.entries tr {
-		padding: 0.4em 0;
-		border-bottom: 1px solid var(--rule);
+		padding: var(--space-sm) 0;
+		border-bottom: var(--rule-thin);
 	}
 
 	.entries td {
@@ -238,16 +275,18 @@ a:active {
 	}
 }
 
+/* ─── Section heading + browse blocks ───────────────────────────────── */
+
 .section-heading {
-	margin: 1.75em 0 0.4em;
-	padding-bottom: 0.2em;
-	border-bottom: 2px solid var(--rule);
-	font-size: 1.15em;
-	font-weight: 700;
+	margin: 1.75em 0 var(--space-sm);
+	padding-bottom: var(--space-xs);
+	border-bottom: var(--rule-thick);
+	font-size: var(--font-size-heading);
+	font-weight: var(--font-weight-bold);
 }
 
 .browse-block {
-	margin-bottom: 1.5rem;
+	margin-bottom: var(--space-lg);
 	line-height: 1.7;
 }
 
@@ -257,33 +296,35 @@ a:active {
 }
 
 .browse-block .count {
-	color: var(--fg-meta);
-	font-size: 0.8em;
+	color: var(--color-muted);
+	font-size: var(--font-size-small);
 }
 
+/* ─── Footer + utilities ────────────────────────────────────────────── */
+
 footer {
-	margin-top: 2rem;
-	padding-top: 0.5em;
-	border-top: 2px solid var(--rule);
-	color: var(--fg-meta);
-	font-size: 0.8em;
-	font-weight: 300;
+	margin-top: var(--space-xl);
+	padding-top: var(--space-sm);
+	border-top: var(--rule-thick);
+	color: var(--color-muted);
+	font-size: var(--font-size-small);
+	font-weight: var(--font-weight-light);
 }
 
 footer a {
-	color: var(--fg-meta);
+	color: var(--color-muted);
 }
 
 footer a:hover {
-	color: var(--fg);
+	color: var(--color-fg);
 }
 
 .muted {
-	color: var(--fg-meta);
+	color: var(--color-muted);
 	font-size: 0.85em;
 }
 
 .no-results {
 	padding: 1rem 0;
-	color: var(--fg-meta);
+	color: var(--color-muted);
 }

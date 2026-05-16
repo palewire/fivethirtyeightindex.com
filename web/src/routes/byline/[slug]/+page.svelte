@@ -1,5 +1,5 @@
 <script lang="ts">
-	import EntryList from '$lib/EntryList.svelte';
+	import { EntryList } from '$lib/components';
 	import type { PageData } from './$types';
 	let { data }: { data: PageData } = $props();
 </script>

@@ -1,6 +1,11 @@
 <script lang="ts">
-	import { base } from '$app/paths';
-	import EntryList from '$lib/EntryList.svelte';
+	import {
+		BylineTeaser,
+		EntryList,
+		SearchBox,
+		Tagline,
+		YearList
+	} from '$lib/components';
 	import { loadEntries } from '$lib/data';
 	import { search, type SearchResult } from '$lib/search';
 	import type { Entry } from '$lib/types';
@@ -20,11 +25,9 @@
 		])
 	);
 
-	// Seed results with an empty array; the homepage shows `data.opening`
-	// (oldest entries) below until the user types a query.
 	let results = $state<Entry[] | SearchResult[]>([]);
-	let allEntries: Entry[] | null = null;
 	let searched = $state(false);
+	let allEntries: Entry[] | null = null;
 
 	async function ensureLoaded() {
 		if (allEntries) return allEntries;
@@ -41,50 +44,15 @@
 		results = search(entries, query, { kinds: enabled, limit: 100 });
 		searched = true;
 	}
-
-	function onInput(event: Event) {
-		query = (event.target as HTMLInputElement).value;
-		void rerunSearch();
-	}
-
-	function toggleKind(kind: string) {
-		kindFilters.set(kind, !kindFilters.get(kind));
-		kindFilters = new Map(kindFilters);
-		void rerunSearch();
-	}
 </script>
 
 <svelte:head>
 	<title>fakethirtyeight.com — index</title>
 </svelte:head>
 
-<p class="tagline">
-	An index of every fivethirtyeight.com article, liveblog, project, video, podcast, and
-	methodology page preserved by the Internet Archive. {data.total.toLocaleString()} entries.
-	<a href="{base}/data/articles.csv" class="muted-link">Download as CSV →</a>
-</p>
+<Tagline total={data.total} />
 
-<form class="search" onsubmit={(e) => e.preventDefault()}>
-	<input
-		type="search"
-		placeholder="Search title or byline…"
-		bind:value={query}
-		oninput={onInput}
-		autocomplete="off"
-		spellcheck="false"
-	/>
-	<div class="filters">
-		{#each [...kindFilters.keys()] as kind (kind)}
-			<label>
-				<input
-					type="checkbox"
-					checked={kindFilters.get(kind)}
-					onchange={() => toggleKind(kind)}
-				/>{kind}
-			</label>
-		{/each}
-	</div>
-</form>
+<SearchBox bind:query bind:kindFilters oninput={rerunSearch} />
 
 {#if searched}
 	{#if results.length === 0}
@@ -102,26 +70,6 @@
 {/if}
 
 {#if !searched}
-	<h2 class="section-heading">Browse by year</h2>
-	<div class="browse-block">
-		<p class="browse-list">
-			{#each data.years as year (year)}
-				<a href="{base}/year/{year}/">{year}</a>
-			{/each}
-		</p>
-	</div>
-
-	<h2 class="section-heading">Browse by byline</h2>
-	<div class="browse-block">
-		<p class="browse-list">
-			{#each data.topBylines as b (b.slug)}
-				<a href="{base}/byline/{b.slug}/">{b.name}</a><span class="count"> ({b.count})</span>
-			{/each}
-		</p>
-		<p>
-			<a href="{base}/byline/"
-				>See all {data.totalBylines.toLocaleString()} bylines →</a
-			>
-		</p>
-	</div>
+	<YearList years={data.years} />
+	<BylineTeaser bylines={data.topBylines} total={data.totalBylines} />
 {/if}

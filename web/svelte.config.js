@@ -1,9 +1,14 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
-// On GitHub Pages this lives at palewire.github.io/fakethirtyeight.com/
-// so we set the base path accordingly. Local dev (vite dev) ignores it.
+// Base path detection:
+//   • dev or custom-domain (CNAME present in static/): base = ''
+//   • gh-pages subpath fallback: base = '/fakethirtyeight.com'
 const dev = process.env.NODE_ENV !== 'production';
+const hasCname = existsSync(resolve(process.cwd(), 'static/CNAME'));
+const base = dev || hasCname ? '' : '/fakethirtyeight.com';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -16,14 +21,10 @@ const config = {
 			precompress: false,
 			strict: true
 		}),
-		paths: {
-			base: dev ? '' : '/fakethirtyeight.com'
-		},
+		paths: { base },
 		prerender: {
 			handleHttpError: 'warn',
 			handleMissingId: 'warn',
-			// Dynamic byline pages depend on the live data file. Warn rather
-			// than fail if a route has no entries (smoke builds, fresh data).
 			handleUnseenRoutes: 'warn'
 		}
 	}
