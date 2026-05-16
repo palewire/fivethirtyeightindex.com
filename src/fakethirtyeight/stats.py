@@ -22,6 +22,7 @@ class Stats:
     by_mimetype: Counter[str]
     by_status: Counter[str]
     by_source: Counter[str]
+    by_kind: Counter[str]
 
 
 def summarize(index_path: Path = INDEX_FILE) -> Stats:
@@ -39,6 +40,7 @@ def summarize(index_path: Path = INDEX_FILE) -> Stats:
     by_mimetype: Counter[str] = Counter()
     by_status: Counter[str] = Counter()
     by_source: Counter[str] = Counter()
+    by_kind: Counter[str] = Counter()
 
     with index_path.open(newline="", encoding="utf-8") as fh:
         reader = csv.DictReader(fh)
@@ -60,6 +62,7 @@ def summarize(index_path: Path = INDEX_FILE) -> Stats:
             by_mimetype[mimetype or "(unknown)"] += 1
             by_status[status or "(unknown)"] += 1
             by_source[row.get("source") or "(unknown)"] += 1
+            by_kind[row.get("kind") or "(unknown)"] += 1
             ts = row.get("last_seen_ts") or row.get("first_seen_ts") or ""
             year = ts[:4] if len(ts) >= 4 else "(unknown)"
             by_year[year] += 1
@@ -75,6 +78,7 @@ def summarize(index_path: Path = INDEX_FILE) -> Stats:
         by_mimetype=by_mimetype,
         by_status=by_status,
         by_source=by_source,
+        by_kind=by_kind,
     )
 
 
@@ -91,6 +95,7 @@ def format_text(stats: Stats, *, top: int = 15) -> str:
         "",
     ]
     for label, counter in (
+        ("By kind", stats.by_kind),
         ("By host", stats.by_host),
         ("By year (last_seen)", stats.by_year),
         ("By source", stats.by_source),

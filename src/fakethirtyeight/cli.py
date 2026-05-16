@@ -9,6 +9,7 @@ import click
 
 from fakethirtyeight import __version__
 from fakethirtyeight import crawl as crawl_mod
+from fakethirtyeight import curate as curate_mod
 from fakethirtyeight import duplicates as duplicates_mod
 from fakethirtyeight import export as export_mod
 from fakethirtyeight import merge as merge_mod
@@ -119,6 +120,20 @@ def stats(top: int) -> None:
     """Print summary statistics over the merged index."""
     summary = stats_mod.summarize()
     click.echo(stats_mod.format_text(summary, top=top))
+
+
+@cli.command()
+def curate() -> None:
+    """Filter to editorial URLs + roll up liveblogs/projects → data/curated.csv."""
+    summary = curate_mod.curate()
+    click.echo(
+        f"input rows:        {summary.total_in:>10,}\n"
+        f"qualifying (200 HTML, editorial kind): {summary.total_kept:>10,}\n"
+        f"rollup groups:     {summary.out_rows:>10,}\n"
+    )
+    for kind, n in sorted(summary.by_kind.items(), key=lambda kv: -kv[1]):
+        click.echo(f"  {kind:<14s} {n:>10,}")
+    click.echo(f"\nwrote {curate_mod.CURATED_FILE}")
 
 
 @cli.command()

@@ -18,6 +18,8 @@ INDEX_FIELDS = (
     "urlkey",
     "url",
     "canonical_key",
+    "kind",
+    "rollup_key",
     "host",
     "path",
     "query",
@@ -75,12 +77,16 @@ class UrlRecord:
 
     def to_row(self) -> dict[str, str]:
         from fakethirtyeight.canonicalize import canonical_key
+        from fakethirtyeight.classify import classify
 
         host, path, query = _split_url(self.url)
+        classification = classify(self.url, host=host)
         return {
             "urlkey": self.urlkey,
             "url": self.url,
             "canonical_key": canonical_key(self.url),
+            "kind": classification.kind,
+            "rollup_key": classification.rollup_key,
             "host": host,
             "path": path,
             "query": query,
