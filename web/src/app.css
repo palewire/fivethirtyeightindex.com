@@ -1,6 +1,11 @@
 /* ─── Design tokens ──────────────────────────────────────────────────────
    Edit these to retheme the whole site. Colors, typography, and spacing
    are all expressed in terms of these :root custom properties.
+
+   Component-specific styles live next to their component (Svelte's
+   <style> block). This file owns only the design tokens, global resets,
+   and a handful of widely-shared classes that more than one component
+   uses (.entries, .section-heading, .browse-list, .muted, .no-results).
 */
 
 @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,300;0,400;0,700;0,800;1,400&display=swap');
@@ -66,8 +71,8 @@ body {
 	text-align: left;
 }
 
-/* A thin gray rule at the very top edge of the viewport — a subtle nod
-   to palewi.re's heavier topbar without taking up vertical space. */
+/* A gray rule at the very top edge of the viewport — a subtle nod to
+   palewi.re's heavier topbar without taking up vertical space. */
 body {
 	border-top: var(--rule-page-top);
 }
@@ -103,89 +108,9 @@ a:active {
 	padding: 0 var(--page-pad-x) var(--space-xl);
 }
 
-/* ─── Header ────────────────────────────────────────────────────────── */
+/* ─── Shared classes (used by more than one component) ──────────────── */
 
-.site-header {
-	margin: 0 0 var(--space-sm);
-	padding: var(--space-md) 0 0;
-	display: flex;
-	flex-wrap: wrap;
-	align-items: baseline;
-	gap: var(--space-md);
-}
-
-.site-header strong {
-	font-size: var(--font-size-brand);
-	font-weight: var(--font-weight-display);
-	flex: 1 1 auto;
-}
-
-.site-header strong a,
-.site-header strong a:visited {
-	color: var(--color-fg);
-	font-weight: var(--font-weight-display);
-}
-
-.site-header strong a:hover {
-	color: var(--color-link);
-	text-decoration: none;
-}
-
-.site-header nav {
-	font-size: 0.9em;
-	font-weight: var(--font-weight-regular);
-}
-
-.site-header nav a {
-	margin-left: var(--space-md);
-}
-
-/* ─── Tagline ───────────────────────────────────────────────────────── */
-
-.tagline {
-	color: var(--color-muted);
-	font-weight: var(--font-weight-light);
-	margin: 0 0 var(--space-lg);
-}
-
-/* ─── Search ────────────────────────────────────────────────────────── */
-
-.search {
-	margin-bottom: var(--space-lg);
-}
-
-.search input[type='search'] {
-	width: 100%;
-	max-width: 32rem;
-	padding: var(--space-sm) 0.5em;
-	font: inherit;
-	border: var(--rule-thin);
-	background: var(--color-bg);
-}
-
-.search input[type='search']:focus {
-	outline: none;
-	border-color: var(--color-fg);
-}
-
-.search .filters {
-	margin-top: var(--space-sm);
-	color: var(--color-muted);
-	font-size: var(--font-size-small);
-}
-
-.search .filters label {
-	margin-right: var(--space-md);
-	cursor: pointer;
-}
-
-.search .filters input[type='checkbox'] {
-	margin-right: 0.25em;
-	vertical-align: middle;
-}
-
-/* ─── Entries table ─────────────────────────────────────────────────── */
-
+/* Tables of entries — shared between EntryList and BylineTable. */
 .entries {
 	width: 100%;
 	border-collapse: collapse;
@@ -273,8 +198,7 @@ a:active {
 	}
 }
 
-/* ─── Section heading + browse blocks ───────────────────────────────── */
-
+/* Section headings, used by route pages + browse components. */
 .section-heading {
 	margin: 1.75em 0 var(--space-sm);
 	padding-bottom: var(--space-xs);
@@ -283,8 +207,12 @@ a:active {
 	font-weight: var(--font-weight-bold);
 }
 
+/* Browse lists — shared between YearList and BylineTeaser. Sized to
+   match the entry table text so the homepage reads as one coherent
+   list rather than two different font scales. */
 .browse-block {
 	margin-bottom: var(--space-lg);
+	font-size: var(--font-size-table);
 }
 
 .browse-list {
@@ -306,25 +234,7 @@ a:active {
 	margin-left: 0.2em;
 }
 
-/* ─── Footer + utilities ────────────────────────────────────────────── */
-
-footer {
-	margin-top: var(--space-xl);
-	padding-top: var(--space-sm);
-	border-top: var(--rule-thick);
-	color: var(--color-muted);
-	font-size: var(--font-size-small);
-	font-weight: var(--font-weight-light);
-}
-
-footer a {
-	color: var(--color-muted);
-}
-
-footer a:hover {
-	color: var(--color-fg);
-}
-
+/* Utility classes. */
 .muted {
 	color: var(--color-muted);
 	font-size: 0.85em;

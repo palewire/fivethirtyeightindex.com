@@ -11,3 +11,22 @@
 		target="_blank">GitHub</a
 	>.
 </footer>
+
+<style>
+	footer {
+		margin-top: var(--space-xl);
+		padding-top: var(--space-sm);
+		border-top: var(--rule-thick);
+		color: var(--color-muted);
+		font-size: var(--font-size-small);
+		font-weight: var(--font-weight-light);
+	}
+
+	footer a {
+		color: var(--color-muted);
+	}
+
+	footer a:hover {
+		color: var(--color-fg);
+	}
+</style>

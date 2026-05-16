@@ -252,6 +252,8 @@ def _split_authors(byline: str) -> list[str]:
         name = raw.strip().strip(".,;")
         if not name:
             continue
+        if name.isdigit():  # e.g. extractor picked up a year "2017" as the author
+            continue
         key = name.casefold()
         if key in _NON_PERSON_BYLINES:
             continue
