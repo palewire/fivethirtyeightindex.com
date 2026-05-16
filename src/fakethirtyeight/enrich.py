@@ -75,6 +75,106 @@ class EnrichResult:
     error: str = ""
 
 
+def rescrape_bylines(
+    *,
+    enriched_path: Path = ENRICHED_FILE,
+    workers: int = 4,
+    delay: float = 1.0,
+    limit: int | None = None,
+) -> tuple[int, int]:
+    """Re-fetch rows whose byline is empty and re-extract metadata.
+
+    Only updates the byline column when the new extractor produces a
+    non-empty value. Returns (refetched_count, recovered_count).
+
+    Run this after improving metadata.extract — most useful for the
+    2008-2010 Blogspot-era posts whose byline pattern wasn't covered
+    by the original extractor.
+    """
+    if not enriched_path.exists():
+        msg = f"enriched file not found: {enriched_path}. Run `enrich` first."
+        raise FileNotFoundError(msg)
+
+    ensure_dirs()
+
+    # Load existing rows, identify which need rescraping.
+    rows: list[dict[str, str]] = []
+    fieldnames: list[str] = []
+    targets: list[tuple[int, EnrichTarget]] = []
+    with enriched_path.open(newline="", encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        fieldnames = list(reader.fieldnames or ENRICHED_FIELDS)
+        for row in reader:
+            rows.append(row)
+            if row.get("error"):
+                continue
+            if row.get("byline"):
+                continue
+            url = row.get("url") or ""
+            ts = row.get("snapshot_timestamp") or ""
+            if not url or not ts:
+                continue
+            targets.append(
+                (
+                    len(rows) - 1,
+                    EnrichTarget(
+                        rollup_key=row.get("rollup_key") or "",
+                        kind=row.get("kind") or "",
+                        url=url,
+                        timestamp=ts,
+                    ),
+                )
+            )
+            if limit and len(targets) >= limit:
+                break
+
+    if not targets:
+        log.info("no candidates to rescrape")
+        return (0, 0)
+
+    log.info(
+        "rescraping %d rows with empty byline using %d workers, delay=%.1fs",
+        len(targets),
+        workers,
+        delay,
+    )
+
+    recovered = 0
+    write_lock = threading.Lock()
+
+    with make_client() as client:
+
+        def _process(target_pair: tuple[int, EnrichTarget]) -> int:
+            idx, target = target_pair
+            result = _fetch_and_extract(client, target, delay=delay)
+            if result.error or not result.metadata.byline:
+                return 0
+            with write_lock:
+                rows[idx]["byline"] = result.metadata.byline
+                # Don't overwrite title/date — those were correct before;
+                # only fill in the byline gap.
+            return 1
+
+        outcomes = thread_map(
+            _process,
+            targets,
+            max_workers=workers,
+            desc="rescrape-bylines",
+            unit="url",
+        )
+        recovered = sum(outcomes)
+
+    # Write everything back.
+    with enriched_path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+
+    log.info("recovered %d bylines out of %d rescraped", recovered, len(targets))
+    return (len(targets), recovered)
+
+
 def enrich(
     *,
     curated_path: Path = CURATED_FILE,

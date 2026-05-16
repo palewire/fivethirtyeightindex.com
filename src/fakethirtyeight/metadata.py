@@ -40,7 +40,7 @@ _TITLE_SITE_SUFFIXES = (
     " :: FiveThirtyEight",
 )
 
-#: The Nate Silver Blogspot era (2008–2010) prepended the site name + tagline
+#: The Nate Silver Blogspot era (2008-2010) prepended the site name + tagline
 #: to every ``<title>`` tag, e.g.:
 #:     "FiveThirtyEight.com: Politics Done Right: Live from Invesco: ..."
 #: Strip those prefixes so the headline alone shows up.
@@ -190,7 +190,11 @@ def _extract_byline(soup: BeautifulSoup, jsonld: list[JsonObj]) -> str:
 
     # FiveThirtyEight-specific DOM patterns. The ESPN-era template used
     # <p class="single-metadata"> with <a class="author">…</a> children.
+    # The 2008-2010 Blogspot template used <span class="post-author"> by
+    # Nate Silver </span>; the "by " prefix gets stripped downstream by
+    # site_data._split_authors via the role-prefix regex.
     for cls in (
+        "post-author",
         "author",
         "byline",
         "single-metadata",

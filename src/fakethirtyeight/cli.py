@@ -152,6 +152,25 @@ def enrich(workers: int, delay: float, limit: int | None) -> None:
     click.echo(f"enriched {n:,} rows → {enrich_mod.ENRICHED_FILE}")
 
 
+@cli.command("rescrape-bylines")
+@click.option("--workers", type=int, default=4, show_default=True)
+@click.option("--delay", type=float, default=1.0, show_default=True)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap rows to re-fetch (smoke testing).",
+)
+def rescrape_bylines(workers: int, delay: float, limit: int | None) -> None:
+    """Re-fetch rows with empty byline and try the updated extractor."""
+    total, recovered = enrich_mod.rescrape_bylines(
+        workers=workers, delay=delay, limit=limit
+    )
+    click.echo(
+        f"rescraped {total:,} rows, recovered {recovered:,} byline(s)"
+    )
+
+
 @cli.command()
 def curate() -> None:
     """Filter to editorial URLs + roll up liveblogs/projects → data/curated.csv."""

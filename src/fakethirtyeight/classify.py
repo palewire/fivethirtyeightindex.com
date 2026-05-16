@@ -122,7 +122,12 @@ def classify(url: str, host: str | None = None) -> Classification:
     if bare_host == "projects.fivethirtyeight.com":
         if not segs:
             return Classification(KIND_HOMEPAGE, "projects:/")
-        return Classification(KIND_PROJECT, f"project:{segs[0]}")
+        # Top-level project landing: /polls/ → project:polls.
+        # Each drilldown gets its own rollup so e.g. /polls/arizona/ and
+        # /carmelo/aaron-holiday/ surface as individual entries instead
+        # of being merged into their parent project.
+        rollup_path = "/".join(segs)
+        return Classification(KIND_PROJECT, f"project:{rollup_path}")
 
     # ---- main site ------------------------------------------------------
     if bare_host == "fivethirtyeight.com":
@@ -221,14 +226,14 @@ def classify(url: str, host: str | None = None) -> Classification:
 
         return Classification(KIND_OTHER, f"other:{path}")
 
+    # ---- data.fivethirtyeight.com --------------------------------------
+    # The data-publishing landing page (FiveThirtyEight's dataset index).
+    # Roll up as a single "data" project entry.
+    if bare_host == "data.fivethirtyeight.com":
+        return Classification(KIND_PROJECT, "project:data")
+
     # WordPress / Blogspot-era permalinks on www.fivethirtyeight.com were
     # already handled at the top of this function before bare-host stripping.
-
-    return Classification(KIND_OTHER, f"other:{h}{path}")
-
-    # ---- data.fivethirtyeight.com (tiny, rare) -------------------------
-    if bare_host == "data.fivethirtyeight.com":
-        return Classification(KIND_PROJECT, f"data:{path}")
 
     # ---- malformed / unrecognized hosts --------------------------------
     return Classification(KIND_OTHER, f"unknown-host:{h}{path}")

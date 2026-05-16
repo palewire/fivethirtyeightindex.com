@@ -37,6 +37,8 @@ log = logging.getLogger(__name__)
 SITE_DATA_FILE = Path("web/static/data/articles.json")
 SITE_CSV_FILE = Path("web/static/data/articles.csv")
 SITE_META_FILE = Path("web/static/data/articles-meta.json")
+SITEMAP_FILE = Path("web/static/sitemap.xml")
+SITE_BASE_URL = "https://fivethirtyeightindex.com"
 
 # Capture "Nate Silver and Harry Enten", "A, B, and C", "A / B", "A | B".
 # Slash and pipe forms appear in network-attribution bylines
@@ -64,6 +66,7 @@ _NON_PERSON_BYLINES: frozenset[str] = frozenset(
         "abc news live",
         "staff",
         "a fivethirtyeight chat",
+        "rotha052",  # CMS account handle that surfaced as a byline
     }
 )
 
@@ -163,6 +166,10 @@ def build(
     meta_out_path.parent.mkdir(parents=True, exist_ok=True)
     with meta_out_path.open("w", encoding="utf-8") as fh:
         json.dump({"total": len(records)}, fh)
+
+    # Sitemap covers every prerendered route — homepage, byline index,
+    # one entry per year, one entry per byline slug.
+    _write_sitemap(records)
 
     log.info(
         "wrote %d records to %s and %s", len(records), out_path, csv_out_path
@@ -314,8 +321,7 @@ def slugify(text: str) -> str:
         return ""
     norm = unicodedata.normalize("NFKD", text)
     norm = norm.encode("ascii", "ignore").decode("ascii")
-    norm = re.sub(r"[^a-z0-9]+", "-", norm.lower()).strip("-")
-    return norm
+    return re.sub(r"[^a-z0-9]+", "-", norm.lower()).strip("-")
 
 
 def iter_byline_slugs(records: Iterable[SiteRecord]) -> dict[str, list[str]]:
@@ -325,3 +331,31 @@ def iter_byline_slugs(records: Iterable[SiteRecord]) -> dict[str, list[str]]:
         for name in r.authors:
             out.setdefault(slugify(name), []).append(r.id)
     return out
+
+
+def _write_sitemap(
+    records: list[SiteRecord], out_path: Path = SITEMAP_FILE
+) -> None:
+    """Emit a flat sitemap.xml listing every prerendered route."""
+    years: set[int] = set()
+    bylines: set[str] = set()
+    for r in records:
+        if r.year is not None:
+            years.add(r.year)
+        for name in r.authors:
+            slug = slugify(name)
+            if slug:
+                bylines.add(slug)
+
+    urls: list[str] = [f"{SITE_BASE_URL}/", f"{SITE_BASE_URL}/byline/"]
+    urls.extend(f"{SITE_BASE_URL}/year/{y}/" for y in sorted(years))
+    urls.extend(f"{SITE_BASE_URL}/byline/{slug}/" for slug in sorted(bylines))
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", encoding="utf-8") as fh:
+        fh.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+        fh.write('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
+        for url in urls:
+            fh.write(f"  <url><loc>{url}</loc></url>\n")
+        fh.write("</urlset>\n")
+    log.info("wrote sitemap with %d urls to %s", len(urls), out_path)

@@ -169,7 +169,9 @@ CASES: list[tuple[str, str, str]] = [
         KIND_ARCHIVE,
         "archive:/2008_05_04_archive.html",
     ),
-    # Projects rollup — all sub-paths share rollup_key
+    # Projects: the landing is its own rollup, each drilldown is its own
+    # rollup (so individual congresspeople, NBA players, states, leagues
+    # all surface as separate entries).
     (
         "https://projects.fivethirtyeight.com/polls/",
         KIND_PROJECT,
@@ -178,12 +180,24 @@ CASES: list[tuple[str, str, str]] = [
     (
         "https://projects.fivethirtyeight.com/polls/president-trump/",
         KIND_PROJECT,
-        "project:polls",
+        "project:polls/president-trump",
     ),
     (
         "https://projects.fivethirtyeight.com/2020-election-forecast/states/",
         KIND_PROJECT,
-        "project:2020-election-forecast",
+        "project:2020-election-forecast/states",
+    ),
+    # Multi-segment drilldown (district level)
+    (
+        "https://projects.fivethirtyeight.com/2018-midterm-election-forecast/house/california/25/",
+        KIND_PROJECT,
+        "project:2018-midterm-election-forecast/house/california/25",
+    ),
+    # data.fivethirtyeight.com (the data publishing landing page)
+    (
+        "https://data.fivethirtyeight.com/",
+        KIND_PROJECT,
+        "project:data",
     ),
     # Empty / weird
     ("", KIND_OTHER, ""),
@@ -213,7 +227,8 @@ def test_liveblog_sub_urls_all_collapse_to_one_rollup_key():
     assert keys == {"liveblog:2020-election-results"}
 
 
-def test_project_sub_urls_all_collapse_to_one_rollup_key():
+def test_project_drilldowns_each_get_unique_rollup_keys():
+    """The project landing and each drilldown surface as separate entries."""
     keys = {
         classify(u).rollup_key
         for u in [
@@ -222,4 +237,21 @@ def test_project_sub_urls_all_collapse_to_one_rollup_key():
             "https://projects.fivethirtyeight.com/polls/president-trump/approval/",
         ]
     }
-    assert keys == {"project:polls"}
+    assert keys == {
+        "project:polls",
+        "project:polls/generic-ballot",
+        "project:polls/president-trump/approval",
+    }
+
+
+def test_project_drilldown_query_string_variants_merge():
+    """Tracking-param URL variants still merge into the same drilldown."""
+    keys = {
+        classify(u).rollup_key
+        for u in [
+            "https://projects.fivethirtyeight.com/polls/arizona/",
+            "https://projects.fivethirtyeight.com/polls/arizona/?ex_cid=538fb",
+            "https://projects.fivethirtyeight.com/polls/arizona/?utm_source=twitter",
+        ]
+    }
+    assert keys == {"project:polls/arizona"}

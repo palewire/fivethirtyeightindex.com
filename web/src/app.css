@@ -178,19 +178,20 @@ a:active {
 	color: var(--color-fg);
 }
 
-/* On narrow screens, keep the tabular layout. Squeeze the auxiliary
-   date + byline columns so the headline cell gets all remaining
-   horizontal room and wraps to multiple lines as needed. */
+/* On narrow screens, keep the tabular layout. Just narrow the
+   auxiliary date + byline columns so the headline cell takes the
+   remaining horizontal room and wraps as needed. We deliberately
+   don't shrink the font on those columns — uneven font sizes plus
+   `vertical-align: top` makes line metrics fall out of sync and
+   the smaller cells appear visually offset from the title. */
 @media (max-width: 640px) {
 	.entries .c-date {
-		width: 5em;
-		font-size: 0.8em;
+		width: 6em;
 		padding-right: 0.4em;
 	}
 
 	.entries .c-byline {
 		max-width: 7em;
-		font-size: 0.8em;
 		padding-left: 0.4em;
 	}
 }
