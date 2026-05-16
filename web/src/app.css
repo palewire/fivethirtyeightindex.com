@@ -122,7 +122,11 @@ a:active {
 }
 
 .entries td {
-	padding: 0.35em 0.6em 0.35em 0;
+	/* Asymmetric padding compensates for the half-leading + descender
+	   "ghost space" below the baseline that's mostly unused by
+	   caps-heavy headlines. Visually balances the text within the row
+	   while keeping baselines aligned across cells. */
+	padding: 0.55em 0.6em 0.3em 0;
 	vertical-align: baseline;
 	border-bottom: var(--rule-thin);
 }
