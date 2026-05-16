@@ -80,6 +80,8 @@ _NON_PERSON_BYLINES: frozenset[str] = frozenset(
         "abc news live",
         "staff",
         "a fivethirtyeight chat",
+        "a fivethirtyeight podcast",
+        "a fivethirtyeightchat",
         "rotha052",  # CMS account handle that surfaced as a byline
     }
 )

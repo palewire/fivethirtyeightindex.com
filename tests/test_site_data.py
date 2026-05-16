@@ -23,6 +23,8 @@ from fakethirtyeight.site_data import _split_authors, _title_from_url, slugify
         ("ABC News / FiveThirtyEight", []),
         ("Staff", []),
         ("A FiveThirtyEight Chat", []),
+        ("A FiveThirtyEight Podcast", []),
+        ("A FiveThirtyEightChat", []),
         ("ABC News Live", []),
         # Pure-numeric strings (years, IDs) aren't names
         ("2017", []),
