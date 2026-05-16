@@ -51,7 +51,7 @@ CASES: list[tuple[str, str, str]] = [
         KIND_SECTION,
         "section:features",
     ),
-    # Liveblog rollup
+    # Liveblog rollup — all three URL path variants merge.
     (
         "https://fivethirtyeight.com/live-blog/2020-election-results/foo/bar/",
         KIND_LIVEBLOG,
@@ -61,6 +61,38 @@ CASES: list[tuple[str, str, str]] = [
         "https://fivethirtyeight.com/live-blog/2020-election-results/",
         KIND_LIVEBLOG,
         "liveblog:2020-election-results",
+    ),
+    (
+        "http://fivethirtyeight.com/liveblog/special-coverage-the-2014-midterms/?lpup=99",
+        KIND_LIVEBLOG,
+        "liveblog:special-coverage-the-2014-midterms",
+    ),
+    (
+        "http://fivethirtyeight.com/liveblogs/2016-election-first-republican-presidential-debate/",
+        KIND_LIVEBLOG,
+        "liveblog:2016-election-first-republican-presidential-debate",
+    ),
+    # Pre-projects.fivethirtyeight.com interactive projects
+    (
+        "http://fivethirtyeight.com/interactives/senate-forecast/",
+        KIND_PROJECT,
+        "project:senate-forecast",
+    ),
+    (
+        "http://fivethirtyeight.com/interactives/world-cup/",
+        KIND_PROJECT,
+        "project:world-cup",
+    ),
+    (
+        "http://fivethirtyeight.com/interactives/",
+        KIND_SECTION,
+        "section:interactives",
+    ),
+    # /interactives/page/N still routes to paginated via the page-N guard.
+    (
+        "http://fivethirtyeight.com/interactives/page/2/",
+        KIND_PAGINATED,
+        None,
     ),
     # Videos
     (

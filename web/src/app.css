@@ -204,7 +204,7 @@ a:active {
 	padding-bottom: var(--space-xs);
 	border-bottom: var(--rule-thick);
 	font-size: var(--font-size-heading);
-	font-weight: var(--font-weight-bold);
+	font-weight: var(--font-weight-regular);
 }
 
 /* Browse lists — shared between YearList and BylineTeaser. Sized to

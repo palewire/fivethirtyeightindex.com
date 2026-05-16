@@ -152,8 +152,11 @@ def classify(url: str, host: str | None = None) -> Classification:
         if first == "player":
             return Classification(KIND_OTHER, f"player:{path}")
 
-        # Liveblogs — rollup by second segment (the liveblog slug)
-        if first == "live-blog":
+        # Liveblogs — rollup by second segment (the liveblog slug). The
+        # canonical path is `/live-blog/` (hyphenated) but the early site
+        # used `/liveblog/` and `/liveblogs/` as well. All variants roll up
+        # to the same `liveblog:<slug>` key so dupes across URL forms merge.
+        if first in {"live-blog", "liveblog", "liveblogs"}:
             if len(segs) >= 2:
                 return Classification(KIND_LIVEBLOG, f"liveblog:{segs[1]}")
             return Classification(KIND_LIVEBLOG, "liveblog:")
@@ -174,6 +177,15 @@ def classify(url: str, host: str | None = None) -> Classification:
         # DataLab era articles
         if first == "datalab" and len(segs) == 2:
             return Classification(KIND_ARTICLE, f"article:datalab/{segs[1]}")
+
+        # Pre-`projects.fivethirtyeight.com` interactive projects lived at
+        # `/interactives/<slug>/` (and were paginated for archive views,
+        # already routed to `paginated` above). Roll up by slug into the
+        # same `project:<slug>` namespace as the subdomain projects.
+        if first == "interactives":
+            if len(segs) == 1:
+                return Classification(KIND_SECTION, "section:interactives")
+            return Classification(KIND_PROJECT, f"project:{segs[1]}")
 
         # Videos & podcasts
         if first == "videos":
