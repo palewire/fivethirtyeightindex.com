@@ -178,35 +178,28 @@ a:active {
 	color: var(--color-fg);
 }
 
+/* On narrow screens, keep the tabular layout. Squeeze the auxiliary
+   date + byline columns so the headline cell gets all remaining
+   horizontal room and wraps to multiple lines as needed. */
 @media (max-width: 640px) {
-	.entries,
-	.entries tbody,
-	.entries tr,
-	.entries td {
-		display: block;
-		width: auto;
+	.entries .c-date {
+		width: 5em;
+		font-size: 0.8em;
+		padding-right: 0.4em;
 	}
 
-	.entries tr {
-		padding: var(--space-sm) 0;
-		border-bottom: var(--rule-thin);
-	}
-
-	.entries td {
-		padding: 0;
-		border-bottom: none;
-	}
-
-	.entries .c-date,
 	.entries .c-byline {
-		font-size: 0.85em;
-		text-align: left;
-		white-space: normal;
-		max-width: none;
+		max-width: 7em;
+		font-size: 0.8em;
+		padding-left: 0.4em;
 	}
+}
 
-	.entries .c-byline::before {
-		content: 'by ';
+@media (max-width: 400px) {
+	/* On phones, hide the byline column entirely so the headline isn't
+	   crushed. The byline is still reachable via the byline pages. */
+	.entries .c-byline {
+		display: none;
 	}
 }
 
@@ -220,9 +213,11 @@ a:active {
 }
 
 /* A page-title h1 (year archive title, byline detail title) doesn't need
-   the bottom rule that delimits inline h2 sections from prose. */
+   the bottom rule that delimits inline h2 sections from prose, and sits
+   flush with the tagline above it. */
 h1.section-heading {
 	border-bottom: none;
+	margin-top: 0;
 }
 
 /* Browse lists — shared between YearList and BylineTeaser. Sized to
