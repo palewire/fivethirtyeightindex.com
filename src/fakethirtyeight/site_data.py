@@ -56,6 +56,18 @@ _BYLINE_ROLE_PREFIX = re.compile(
     re.IGNORECASE,
 )
 
+#: Canonical-form aliases for misspelled or CMS-handle bylines found in
+#: the source data. Comparison is case-insensitive on the key. The mapped
+#: value is used verbatim as the display name, so entries with the typo
+#: and the canonical spelling merge to one byline page.
+_BYLINE_ALIASES: dict[str, str] = {
+    "juila wolfe": "Julia Wolfe",
+    "laura bronnner": "Laura Bronner",
+    "elena mejía": "Elena Mejia",
+    "amelia thomson-deveaux": "Amelia Thomson-DeVeaux",
+    "meena.ganesan": "Meena Ganesan",
+}
+
 #: Names that aren't actual people — staff/network/format attributions.
 #: Comparison is case-insensitive.
 _NON_PERSON_BYLINES: frozenset[str] = frozenset(
@@ -259,6 +271,7 @@ def _split_authors(byline: str) -> list[str]:
       person gets credit on their byline page.
     - Splits on ``,`` / ``and`` / ``/`` / ``|``.
     - Filters out non-person attributions (FiveThirtyEight, ABC News, …).
+    - Normalizes known typo/handle aliases ("Juila Wolfe" → "Julia Wolfe").
     - Deduplicates case-insensitively, preserves order.
     """
     if not byline.strip():
@@ -273,6 +286,8 @@ def _split_authors(byline: str) -> list[str]:
             continue
         if name.isdigit():  # e.g. extractor picked up a year "2017" as the author
             continue
+        # Normalize typos / CMS handles to the canonical display form.
+        name = _BYLINE_ALIASES.get(name.casefold(), name)
         key = name.casefold()
         if key in _NON_PERSON_BYLINES:
             continue

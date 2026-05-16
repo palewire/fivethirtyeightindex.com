@@ -27,6 +27,12 @@ from fakethirtyeight.site_data import _split_authors, _title_from_url, slugify
         # Pure-numeric strings (years, IDs) aren't names
         ("2017", []),
         ("Nate Silver and 2017", ["Nate Silver"]),
+        # Typo aliases normalize to canonical form
+        ("Juila Wolfe", ["Julia Wolfe"]),
+        ("Laura Bronnner", ["Laura Bronner"]),
+        ("meena.ganesan", ["Meena Ganesan"]),
+        # Mixed: real author + typo of same author merges to one
+        ("Julia Wolfe and Juila Wolfe", ["Julia Wolfe"]),
         # Mix: staff + a real author drops only the staff one
         ("FiveThirtyEight and Nate Silver", ["Nate Silver"]),
         # Role prefixes get stripped

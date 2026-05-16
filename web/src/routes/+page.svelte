@@ -52,7 +52,9 @@
 		<EntryList entries={results as Entry[]} />
 	{/if}
 {:else}
-	<EntryList entries={data.opening} />
+	<div class="opening-teaser">
+		<EntryList entries={data.opening} />
+	</div>
 {/if}
 
 {#if !searched}

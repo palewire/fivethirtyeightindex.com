@@ -204,6 +204,15 @@ a:active {
 	}
 }
 
+/* On mobile, trim the homepage opening list so the Browse-by-year and
+   Browse-by-byline menus surface above the fold. Search results and
+   year/byline detail pages render their full lists. */
+@media (max-width: 640px) {
+	.opening-teaser .entries tbody tr:nth-child(n + 6) {
+		display: none;
+	}
+}
+
 /* Section headings, used by route pages + browse components. */
 .section-heading {
 	margin: 1.75em 0 var(--space-sm);
