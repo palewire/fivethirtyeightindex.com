@@ -63,10 +63,6 @@
 	{/if}
 {:else}
 	<EntryList entries={data.opening} />
-	<p class="muted">
-		Showing the first {data.opening.length} entries chronologically. Browse a specific
-		year below, or search above.
-	</p>
 {/if}
 
 {#if !searched}

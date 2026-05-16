@@ -44,7 +44,7 @@
 	/* Rules. */
 	--rule-thin: 1px solid var(--color-rule);
 	--rule-thick: 2px solid var(--color-rule);
-	--rule-page-top: 3px solid var(--color-rule);
+	--rule-page-top: 15px solid var(--color-rule);
 }
 
 /* ─── Reset + body ──────────────────────────────────────────────────── */
@@ -106,8 +106,8 @@ a:active {
 /* ─── Header ────────────────────────────────────────────────────────── */
 
 .site-header {
-	margin: 0 0 var(--space-lg);
-	padding: var(--space-md) 0 var(--space-sm);
+	margin: 0 0 var(--space-sm);
+	padding: var(--space-md) 0 0;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
