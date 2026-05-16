@@ -72,8 +72,8 @@ fakethirtyeight = "fakethirtyeight.cli:cli"
 
 [project.urls]
 Maintainer = "https://github.com/palewire/"
-Source = "https://github.com/palewire/fakethirtyeight.com/"
-Issues = "https://github.com/palewire/fakethirtyeight.com/issues/"
+Source = "https://github.com/palewire/fivethirtyeightindex.com/"
+Issues = "https://github.com/palewire/fivethirtyeightindex.com/issues/"
 
 [tool.setuptools.packages.find]
 where = ["src"]

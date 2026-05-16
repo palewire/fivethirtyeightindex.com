@@ -6,7 +6,7 @@
 	Created by <a href="https://palewi.re/">Ben Welsh</a>.
 	<a href="{base}/data/articles.csv">Download the full index as CSV</a>. Open source on
 	<a
-		href="https://github.com/palewire/fakethirtyeight.com"
+		href="https://github.com/palewire/fivethirtyeightindex.com"
 		rel="noopener external"
 		target="_blank">GitHub</a
 	>.

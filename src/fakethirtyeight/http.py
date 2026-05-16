@@ -11,7 +11,7 @@ import truststore
 
 DEFAULT_TIMEOUT = httpx.Timeout(connect=30.0, read=600.0, write=30.0, pool=30.0)
 DEFAULT_HEADERS = {
-    "User-Agent": "fakethirtyeight/0.1 (+https://github.com/palewire/fakethirtyeight.com)",
+    "User-Agent": "fakethirtyeight/0.1 (+https://github.com/palewire/fivethirtyeightindex.com)",
     "Accept-Encoding": "gzip",
 }
 
