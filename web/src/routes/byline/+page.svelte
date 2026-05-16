@@ -40,9 +40,13 @@
 
 {#each buckets as [letter, group] (letter)}
 	<h2 class="section-heading">{letter}</h2>
-	<p class="browse-list">
+	<ul class="browse-list">
 		{#each group as b (b.slug)}
-			<a href="{base}/byline/{b.slug}/">{b.name}</a><span class="count"> ({b.count})</span>
+			<li>
+				<a href="{base}/byline/{b.slug}/">{b.name}</a><span class="count"
+					>({b.count})</span
+				>
+			</li>
 		{/each}
-	</p>
+	</ul>
 {/each}

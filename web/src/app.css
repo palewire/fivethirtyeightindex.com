@@ -44,7 +44,7 @@
 	/* Rules. */
 	--rule-thin: 1px solid var(--color-rule);
 	--rule-thick: 2px solid var(--color-rule);
-	--rule-header: 10px solid var(--color-rule);
+	--rule-page-top: 3px solid var(--color-rule);
 }
 
 /* ─── Reset + body ──────────────────────────────────────────────────── */
@@ -64,6 +64,12 @@ body {
 	font-weight: var(--font-weight-light);
 	line-height: var(--line-height-body);
 	text-align: left;
+}
+
+/* A thin gray rule at the very top edge of the viewport — a subtle nod
+   to palewi.re's heavier topbar without taking up vertical space. */
+body {
+	border-top: var(--rule-page-top);
 }
 
 @media (max-width: 550px) {
@@ -102,7 +108,6 @@ a:active {
 .site-header {
 	margin: 0 0 var(--space-lg);
 	padding: var(--space-md) 0 var(--space-sm);
-	border-bottom: var(--rule-header);
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
@@ -287,17 +292,25 @@ a:active {
 
 .browse-block {
 	margin-bottom: var(--space-lg);
-	line-height: 1.7;
 }
 
-.browse-block .browse-list a {
-	margin-right: 0.6em;
+.browse-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.3em 0.8em;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.browse-list li {
 	white-space: nowrap;
 }
 
-.browse-block .count {
+.browse-list .count {
 	color: var(--color-muted);
 	font-size: var(--font-size-small);
+	margin-left: 0.2em;
 }
 
 /* ─── Footer + utilities ────────────────────────────────────────────── */

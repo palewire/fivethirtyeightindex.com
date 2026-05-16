@@ -9,9 +9,9 @@
 
 <h2 class="section-heading">Browse by year</h2>
 <div class="browse-block">
-	<p class="browse-list">
+	<ul class="browse-list">
 		{#each years as year (year)}
-			<a href="{base}/year/{year}/">{year}</a>
+			<li><a href="{base}/year/{year}/">{year}</a></li>
 		{/each}
-	</p>
+	</ul>
 </div>

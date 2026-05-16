@@ -10,9 +10,14 @@
 
 	let { entries, showKind = true }: Props = $props();
 
+	/** Force the date column to a uniform YYYY-MM-DD width. The Blogspot
+	 *  era only encoded year + month in URLs, so we pad an unknown day
+	 *  with `??` so the column stays aligned. */
 	function fmtDate(iso: string): string {
 		if (!iso) return '';
 		if (iso.length >= 10) return iso.slice(0, 10);
+		if (/^\d{4}-\d{2}$/.test(iso)) return `${iso}-??`;
+		if (/^\d{4}$/.test(iso)) return `${iso}-??-??`;
 		return iso;
 	}
 </script>

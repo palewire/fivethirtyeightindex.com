@@ -15,7 +15,8 @@ export const load: PageLoad = async ({ fetch }) => {
 		topBylines: byByline.slice(0, 40),
 		totalBylines: byByline.length,
 		// `cache.all` is sorted oldest-first; the first slice is "from the
-		// beginning" — appropriate for a retrospective.
-		opening: cache.all.slice(0, 50)
+		// beginning" — appropriate for a retrospective. Kept short so the
+		// homepage stays scannable; year pages are the deep-dive.
+		opening: cache.all.slice(0, 20)
 	};
 };

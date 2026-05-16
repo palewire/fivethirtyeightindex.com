@@ -16,11 +16,15 @@
 
 <h2 class="section-heading">Browse by byline</h2>
 <div class="browse-block">
-	<p class="browse-list">
+	<ul class="browse-list">
 		{#each bylines as b (b.slug)}
-			<a href="{base}/byline/{b.slug}/">{b.name}</a><span class="count"> ({b.count})</span>
+			<li>
+				<a href="{base}/byline/{b.slug}/">{b.name}</a><span class="count"
+					>({b.count})</span
+				>
+			</li>
 		{/each}
-	</p>
+	</ul>
 	<p>
 		<a href="{base}/byline/">See all {total.toLocaleString()} bylines →</a>
 	</p>
