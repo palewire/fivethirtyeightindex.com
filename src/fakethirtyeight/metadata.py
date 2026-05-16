@@ -128,14 +128,29 @@ def _extract_title(soup: BeautifulSoup, jsonld: list[JsonObj]) -> str:
     return ""
 
 
+_TITLE_EDGE_PUNCT = re.compile(r"^[|:\-–—\s]+|[|:\-–—\s]+$")
+
+#: Strings that should be treated as "no title" if they're all that's left
+#: after suffix/prefix/edge cleanup. These are the bare site identifications.
+_BARE_SITE_NAMES: frozenset[str] = frozenset(
+    {"fivethirtyeight", "fivethirtyeight.com"}
+)
+
+
 def _clean_title(raw: str) -> str:
     s = " ".join(raw.split()).strip()
+    # Edge-trim first so a leading "| FiveThirtyEight" form normalizes to
+    # the bare "FiveThirtyEight" that the bare-site check below can drop.
+    s = _TITLE_EDGE_PUNCT.sub("", s).strip()
     for suffix in _TITLE_SITE_SUFFIXES:
         if s.endswith(suffix):
             s = s[: -len(suffix)].strip()
             break
     s = _TITLE_SITE_PREFIXES.sub("", s, count=1)
-    return s.strip()
+    s = _TITLE_EDGE_PUNCT.sub("", s).strip()
+    if s.casefold() in _BARE_SITE_NAMES:
+        return ""
+    return s
 
 
 # ---------------------------------------------------------------------------

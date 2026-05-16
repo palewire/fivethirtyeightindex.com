@@ -35,6 +35,17 @@ def test_extract_title_strips_site_suffix():
     assert md.title == "The Real MVP"
 
 
+def test_extract_title_drops_when_only_separator_left():
+    """A <title> that's just '| FiveThirtyEight' should clean to empty."""
+    html = b"<html><head><title>| FiveThirtyEight</title></head></html>"
+    assert extract(html).title == ""
+
+
+def test_extract_title_strips_leftover_edge_separators():
+    html = b"<html><head><title>: A Real Headline -</title></head></html>"
+    assert extract(html).title == "A Real Headline"
+
+
 def test_extract_title_strips_blogspot_era_prefix():
     html = (
         b"<html><head><title>FiveThirtyEight.com: Politics Done Right: Live from Invesco</title></head></html>"

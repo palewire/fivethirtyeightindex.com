@@ -37,8 +37,32 @@ log = logging.getLogger(__name__)
 SITE_DATA_FILE = Path("web/static/data/articles.json")
 SITE_CSV_FILE = Path("web/static/data/articles.csv")
 
-# Capture "Nate Silver and Harry Enten" or "A, B, and C" or "A, B" forms.
-_BYLINE_SPLIT = re.compile(r"\s*(?:,\s*and\s+|,\s*|\s+and\s+)\s*", re.IGNORECASE)
+# Capture "Nate Silver and Harry Enten", "A, B, and C", "A / B", "A | B".
+# Slash and pipe forms appear in network-attribution bylines
+# ("ABC News / FiveThirtyEight") and rare multi-credit forms
+# ("Trevor Martin | Art by yesyesno").
+_BYLINE_SPLIT = re.compile(
+    r"\s*(?:,\s*and\s+|,\s*|\s+and\s+|\s*/\s*|\s*\|\s*)\s*",
+    re.IGNORECASE,
+)
+
+#: Role prefixes that prepend an author's real name. Strip so the author
+#: gets credit on their byline page instead of having "Edited by" tacked on.
+_BYLINE_ROLE_PREFIX = re.compile(
+    r"^(?:edited\s+by|written\s+by|posted\s+by|by)\s+",
+    re.IGNORECASE,
+)
+
+#: Names that aren't actual people — staff/network/format attributions.
+#: Comparison is case-insensitive.
+_NON_PERSON_BYLINES: frozenset[str] = frozenset(
+    {
+        "fivethirtyeight",
+        "fivethirtyeight.com",
+        "abc news",
+        "staff",
+    }
+)
 
 
 @dataclass(slots=True)
@@ -174,6 +198,11 @@ def _build_record(
         title = _title_from_url(url) or "(untitled)"
 
     authors = _split_authors(byline)
+    # Rebuild the display byline from the cleaned author list so role
+    # prefixes ("Edited by …") and staff attributions vanish from the JSON
+    # and the CSV alike. If no real authors survive the scrub, blank the
+    # display byline too.
+    byline = _join_authors(authors)
     year = _year_from_date(date)
 
     final_url = wayback_url or url
@@ -192,23 +221,39 @@ def _build_record(
     )
 
 
+def _join_authors(authors: list[str]) -> str:
+    """Render a clean display byline from a cleaned author list."""
+    if not authors:
+        return ""
+    if len(authors) == 1:
+        return authors[0]
+    if len(authors) == 2:
+        return f"{authors[0]} and {authors[1]}"
+    return ", ".join(authors[:-1]) + f", and {authors[-1]}"
+
+
 def _split_authors(byline: str) -> list[str]:
     """Split a display byline into individual author names.
 
-    Drops the staff byline ``FiveThirtyEight`` (used for liveblogs) so each
-    individual liveblog doesn't pretend to be by an "author" of that name.
-    Callers can still display ``byline`` verbatim if desired.
+    - Strips leading role prefixes ("Edited by ", "By ", etc.) so the
+      person gets credit on their byline page.
+    - Splits on ``,`` / ``and`` / ``/`` / ``|``.
+    - Filters out non-person attributions (FiveThirtyEight, ABC News, …).
+    - Deduplicates case-insensitively, preserves order.
     """
     if not byline.strip():
         return []
-    parts = _BYLINE_SPLIT.split(byline.strip())
+    cleaned = _BYLINE_ROLE_PREFIX.sub("", byline.strip(), count=1)
+    parts = _BYLINE_SPLIT.split(cleaned)
     out: list[str] = []
     seen: set[str] = set()
     for raw in parts:
-        name = raw.strip()
-        if not name or name.lower() == "fivethirtyeight":
+        name = raw.strip().strip(".,;")
+        if not name:
             continue
         key = name.casefold()
+        if key in _NON_PERSON_BYLINES:
+            continue
         if key in seen:
             continue
         seen.add(key)

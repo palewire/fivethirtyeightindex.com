@@ -17,10 +17,22 @@ from fakethirtyeight.site_data import _split_authors, _title_from_url, slugify
             ["Ryan Best", "Jay Boice", "Ella Koeze"],
         ),
         ("Ryan Best, Jay Boice", ["Ryan Best", "Jay Boice"]),
-        # Staff byline used for liveblogs is dropped
+        # Staff / network bylines drop entirely
         ("FiveThirtyEight", []),
-        # Mix: FiveThirtyEight + a real author drops only the staff one
+        ("FiveThirtyEight.com", []),
+        ("ABC News / FiveThirtyEight", []),
+        ("Staff", []),
+        # Mix: staff + a real author drops only the staff one
         ("FiveThirtyEight and Nate Silver", ["Nate Silver"]),
+        # Role prefixes get stripped
+        ("Edited by Oliver Roeder", ["Oliver Roeder"]),
+        ("By Nate Silver", ["Nate Silver"]),
+        ("Written by Walt Hickey", ["Walt Hickey"]),
+        # Pipe-separated multi-credit
+        (
+            "Trevor Martin | Art by yesyesno",
+            ["Trevor Martin", "Art by yesyesno"],
+        ),
         # Empty / whitespace
         ("", []),
         ("   ", []),
