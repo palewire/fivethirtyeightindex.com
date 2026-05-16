@@ -6,7 +6,6 @@
 		BylineTeaser,
 		EntryList,
 		SearchBox,
-		Tagline,
 		YearList
 	} from '$lib/components';
 	import { loadEntries } from '$lib/data';
@@ -65,8 +64,6 @@
 <svelte:head>
 	<title>fivethirtyeightindex</title>
 </svelte:head>
-
-<Tagline total={data.total} />
 
 <SearchBox bind:value={query} placeholder="Search title or byline…" />
 

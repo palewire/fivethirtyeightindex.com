@@ -1,7 +1,10 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import '../app.css';
-	import { SiteFooter, SiteHeader } from '$lib/components';
-	let { children } = $props();
+	import { SiteFooter, SiteHeader, Tagline } from '$lib/components';
+	import type { LayoutData } from './$types';
+
+	let { children, data }: { children: Snippet; data: LayoutData } = $props();
 
 	const SITE_URL = 'https://fivethirtyeightindex.com';
 	const SOCIAL_IMAGE = `${SITE_URL}/abacus.png`;
@@ -24,6 +27,7 @@
 
 <div class="page">
 	<SiteHeader />
+	<Tagline total={data.total} />
 	{@render children()}
 	<SiteFooter />
 </div>
