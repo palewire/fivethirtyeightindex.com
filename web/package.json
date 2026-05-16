@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare": "svelte-kit sync || echo \"svelte-kit sync deferred\"",
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "svelte-kit sync && vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
   },
