@@ -1,13 +1,6 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
-	import {
-		BylineTeaser,
-		EntryList,
-		SearchBox,
-		YearList
-	} from '$lib/components';
+	import { afterNavigate } from '$app/navigation';
+	import { BylineTeaser, EntryList, SearchBox, YearList } from '$lib/components';
 	import { loadEntries } from '$lib/data';
 	import { search, type SearchResult } from '$lib/search';
 	import type { Entry } from '$lib/types';
@@ -15,39 +8,15 @@
 
 	let { data }: { data: PageData } = $props();
 
-	// The active search query is stored in the URL as `?q=…`. That makes the
-	// header-link return to `/` clear the search for free, and lets a clean
-	// search box render the default homepage state. SvelteKit forbids
-	// reading url.searchParams during prerender, so we start blank and
-	// hydrate from the URL on first client tick.
 	let query = $state('');
-
 	let results = $state<Entry[] | SearchResult[]>([]);
+	let searched = $state(false);
 	let allEntries: Entry[] | null = null;
 
-	// URL → local state (initial hydrate + back/forward + header click).
-	$effect(() => {
-		if (!browser) return;
-		const fromUrl = page.url.searchParams.get('q') ?? '';
-		if (fromUrl !== query) query = fromUrl;
-	});
-
-	// Local state → URL + run search.
-	$effect(() => {
-		const q = query;
-		if (browser) {
-			const next = new URL(page.url);
-			if (q) next.searchParams.set('q', q);
-			else next.searchParams.delete('q');
-			if (next.toString() !== page.url.toString()) {
-				goto(next, { replaceState: true, noScroll: true, keepFocus: true });
-			}
-		}
-		void runSearch(q);
-	});
-
-	async function runSearch(q: string) {
-		if (!q.trim()) {
+	async function runSearch() {
+		if (!query.trim()) {
+			// Empty box: drop back to the default homepage state.
+			searched = false;
 			results = [];
 			return;
 		}
@@ -55,17 +24,25 @@
 			const cache = await loadEntries();
 			allEntries = cache.all;
 		}
-		results = search(allEntries, q, { limit: 100 });
+		results = search(allEntries, query, { limit: 100 });
+		searched = true;
 	}
 
-	let searched = $derived(query.trim() !== '');
+	// Reset search state on any navigation TO the homepage (e.g. clicking
+	// the header brand link while already on /). Skip the initial mount.
+	afterNavigate(({ from }) => {
+		if (!from) return;
+		query = '';
+		searched = false;
+		results = [];
+	});
 </script>
 
 <svelte:head>
 	<title>fivethirtyeightindex</title>
 </svelte:head>
 
-<SearchBox bind:value={query} placeholder="Search title or byline…" />
+<SearchBox bind:value={query} placeholder="Search title or byline…" oninput={runSearch} />
 
 {#if searched}
 	{#if results.length === 0}

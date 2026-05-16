@@ -26,7 +26,7 @@
 	{data.entries.length === 1 ? 'byline' : 'bylines'}
 </h1>
 
-<SearchBox bind:value={query} placeholder="Search this byline's entries…" />
+<SearchBox bind:value={query} placeholder="Search by headline…" />
 
 {#if filtered.length === 0}
 	<p class="no-results">No matches.</p>
