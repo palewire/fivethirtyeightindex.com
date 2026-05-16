@@ -224,13 +224,6 @@ a:active {
 	text-decoration: underline;
 }
 
-.entries .c-kind {
-	font-style: italic;
-	font-size: 0.85em;
-	color: var(--color-muted);
-	margin-left: 0.25em;
-}
-
 .entries .c-byline {
 	color: var(--color-muted);
 	white-space: nowrap;

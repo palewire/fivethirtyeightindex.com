@@ -22,6 +22,7 @@ from fakethirtyeight.site_data import _split_authors, _title_from_url, slugify
         ("FiveThirtyEight.com", []),
         ("ABC News / FiveThirtyEight", []),
         ("Staff", []),
+        ("A FiveThirtyEight Chat", []),
         # Mix: staff + a real author drops only the staff one
         ("FiveThirtyEight and Nate Silver", ["Nate Silver"]),
         # Role prefixes get stripped

@@ -14,17 +14,6 @@
 	let { data }: { data: PageData } = $props();
 
 	let query = $state('');
-	let kindFilters = $state(
-		new Map<string, boolean>([
-			['article', true],
-			['liveblog', true],
-			['project', true],
-			['podcast', true],
-			['video', true],
-			['methodology', true]
-		])
-	);
-
 	let results = $state<Entry[] | SearchResult[]>([]);
 	let searched = $state(false);
 	let allEntries: Entry[] | null = null;
@@ -38,10 +27,7 @@
 
 	async function rerunSearch() {
 		const entries = await ensureLoaded();
-		const enabled = new Set(
-			[...kindFilters.entries()].filter(([, on]) => on).map(([k]) => k)
-		);
-		results = search(entries, query, { kinds: enabled, limit: 100 });
+		results = search(entries, query, { limit: 100 });
 		searched = true;
 	}
 </script>
@@ -52,7 +38,7 @@
 
 <Tagline total={data.total} />
 
-<SearchBox bind:query bind:kindFilters oninput={rerunSearch} />
+<SearchBox bind:value={query} placeholder="Search title or byline…" oninput={rerunSearch} />
 
 {#if searched}
 	{#if results.length === 0}

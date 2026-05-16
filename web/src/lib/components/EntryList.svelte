@@ -5,19 +5,15 @@
 
 	interface Props {
 		entries: Entry[];
-		showKind?: boolean;
 	}
 
-	let { entries, showKind = true }: Props = $props();
+	let { entries }: Props = $props();
 
-	/** Force the date column to a uniform YYYY-MM-DD width. The Blogspot
-	 *  era only encoded year + month in URLs, so we pad an unknown day
-	 *  with `??` so the column stays aligned. */
+	/** YYYY-MM-DD from full ISO timestamps; shorter dates (Blogspot-era
+	 *  YYYY-MM) pass through unmodified. */
 	function fmtDate(iso: string): string {
 		if (!iso) return '';
 		if (iso.length >= 10) return iso.slice(0, 10);
-		if (/^\d{4}-\d{2}$/.test(iso)) return `${iso}-??`;
-		if (/^\d{4}$/.test(iso)) return `${iso}-??-??`;
 		return iso;
 	}
 </script>
@@ -31,9 +27,6 @@
 				</td>
 				<td class="c-title">
 					<a href={entry.url} rel="noopener external" target="_blank">{entry.title}</a>
-					{#if showKind && entry.kind !== 'article'}
-						<em class="c-kind">[{entry.kind}]</em>
-					{/if}
 				</td>
 				<td class="c-byline">
 					{#each entry.authors as name, i (name)}

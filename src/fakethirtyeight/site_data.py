@@ -61,6 +61,7 @@ _NON_PERSON_BYLINES: frozenset[str] = frozenset(
         "fivethirtyeight.com",
         "abc news",
         "staff",
+        "a fivethirtyeight chat",
     }
 )
 

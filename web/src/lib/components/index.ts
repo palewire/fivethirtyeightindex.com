@@ -1,3 +1,4 @@
+export { default as BylineTable } from './BylineTable.svelte';
 export { default as BylineTeaser } from './BylineTeaser.svelte';
 export { default as EntryList } from './EntryList.svelte';
 export { default as SearchBox } from './SearchBox.svelte';

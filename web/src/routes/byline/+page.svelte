@@ -1,34 +1,20 @@
 <script lang="ts">
-	import { base } from '$app/paths';
+	import { BylineTable, SearchBox } from '$lib/components';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	// Group by first letter (A–Z, 0–9, other).
-	function bucketKey(name: string): string {
-		const ch = name.charAt(0).toUpperCase();
-		if (/[A-Z]/.test(ch)) return ch;
-		if (/[0-9]/.test(ch)) return '#';
-		return '·';
-	}
+	let query = $state('');
 
-	let buckets = $derived.by(() => {
-		const map = new Map<string, typeof data.bylines>();
-		for (const b of data.bylines) {
-			const k = bucketKey(b.name);
-			let arr = map.get(k);
-			if (!arr) {
-				arr = [];
-				map.set(k, arr);
-			}
-			arr.push(b);
-		}
-		return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+	let filtered = $derived.by(() => {
+		const q = query.trim().toLowerCase();
+		if (!q) return data.bylines;
+		return data.bylines.filter((b) => b.name.toLowerCase().includes(q));
 	});
 </script>
 
 <svelte:head>
-	<title>Bylines — fakethirtyeight.com</title>
+	<title>Bylines — fivethirtyeightindex.com</title>
 </svelte:head>
 
 <h1 class="section-heading">Bylines ({data.total.toLocaleString()})</h1>
@@ -38,15 +24,10 @@
 	their work in chronological order.
 </p>
 
-{#each buckets as [letter, group] (letter)}
-	<h2 class="section-heading">{letter}</h2>
-	<ul class="browse-list">
-		{#each group as b (b.slug)}
-			<li>
-				<a href="{base}/byline/{b.slug}/">{b.name}</a><span class="count"
-					>({b.count})</span
-				>
-			</li>
-		{/each}
-	</ul>
-{/each}
+<SearchBox bind:value={query} placeholder="Search bylines…" />
+
+{#if filtered.length === 0}
+	<p class="no-results">No matches.</p>
+{:else}
+	<BylineTable bylines={filtered} />
+{/if}
