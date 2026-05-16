@@ -51,8 +51,10 @@ _BYLINE_SPLIT = re.compile(
 
 #: Role prefixes that prepend an author's real name. Strip so the author
 #: gets credit on their byline page instead of having "Edited by" tacked on.
+#: The leading-dash alternative handles the 2008-era Blogspot comment
+#: attribution pattern ("-- Nate Silver").
 _BYLINE_ROLE_PREFIX = re.compile(
-    r"^(?:edited\s+by|written\s+by|posted\s+by|by)\s+",
+    r"^(?:[-–—]+\s*|(?:edited\s+by|written\s+by|posted\s+by|by)\s+)",
     re.IGNORECASE,
 )
 

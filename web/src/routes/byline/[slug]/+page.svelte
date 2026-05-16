@@ -31,5 +31,5 @@
 {#if filtered.length === 0}
 	<p class="no-results">No matches.</p>
 {:else}
-	<EntryList entries={filtered} />
+	<EntryList entries={filtered} showByline={false} />
 {/if}

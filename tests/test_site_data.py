@@ -39,6 +39,10 @@ from fakethirtyeight.site_data import _split_authors, _title_from_url, slugify
         ("Edited by Oliver Roeder", ["Oliver Roeder"]),
         ("By Nate Silver", ["Nate Silver"]),
         ("Written by Walt Hickey", ["Walt Hickey"]),
+        # Leading-dash attribution from Blogspot-era comment pages
+        ("-- Nate Silver", ["Nate Silver"]),
+        ("-- Sean Quinn", ["Sean Quinn"]),
+        ("— Nate Silver", ["Nate Silver"]),
         # Pipe-separated multi-credit
         (
             "Trevor Martin | Art by yesyesno",

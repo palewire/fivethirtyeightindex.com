@@ -123,7 +123,7 @@ a:active {
 
 .entries td {
 	padding: 0.35em 0.6em 0.35em 0;
-	vertical-align: top;
+	vertical-align: baseline;
 	border-bottom: var(--rule-thin);
 }
 
