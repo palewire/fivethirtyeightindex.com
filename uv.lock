@@ -548,6 +548,100 @@ wheels = [
 ]
 
 [[package]]
+name = "fakethirtyeight"
+source = { editable = "." }
+dependencies = [
+    { name = "click" },
+    { name = "httpx" },
+    { name = "tenacity" },
+    { name = "tqdm" },
+    { name = "truststore" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pre-commit" },
+    { name = "setuptools-scm" },
+    { name = "ty" },
+    { name = "vulture" },
+]
+docs = [
+    { name = "myst-parser" },
+    { name = "sphinx", version = "9.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "sphinx", version = "9.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "sphinx-autobuild" },
+    { name = "sphinx-copybutton" },
+    { name = "sphinx-palewire-theme" },
+    { name = "sphinxcontrib-mermaid" },
+]
+notebooks = [
+    { name = "altair" },
+    { name = "ipywidgets" },
+    { name = "jupyterlab" },
+    { name = "openpyxl" },
+    { name = "pandas" },
+    { name = "pyarrow" },
+    { name = "rich" },
+    { name = "xlrd" },
+]
+test = [
+    { name = "freezegun" },
+    { name = "hypothesis" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "pytest-env" },
+    { name = "pytest-ordering" },
+    { name = "pytest-randomly" },
+    { name = "pytest-rerunfailures" },
+    { name = "pytest-runner" },
+    { name = "pytest-sugar" },
+    { name = "pytest-timeout" },
+    { name = "pytest-vcr" },
+    { name = "pytest-xdist" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "altair", marker = "extra == 'notebooks'" },
+    { name = "click" },
+    { name = "freezegun", marker = "extra == 'test'" },
+    { name = "httpx" },
+    { name = "hypothesis", marker = "extra == 'test'" },
+    { name = "ipywidgets", marker = "extra == 'notebooks'" },
+    { name = "jupyterlab", marker = "extra == 'notebooks'" },
+    { name = "myst-parser", marker = "extra == 'docs'" },
+    { name = "openpyxl", marker = "extra == 'notebooks'" },
+    { name = "pandas", marker = "extra == 'notebooks'" },
+    { name = "pre-commit", marker = "extra == 'dev'" },
+    { name = "pyarrow", marker = "extra == 'notebooks'" },
+    { name = "pytest", marker = "extra == 'test'" },
+    { name = "pytest-cov", marker = "extra == 'test'" },
+    { name = "pytest-env", marker = "extra == 'test'" },
+    { name = "pytest-ordering", marker = "extra == 'test'" },
+    { name = "pytest-randomly", marker = "extra == 'test'" },
+    { name = "pytest-rerunfailures", marker = "extra == 'test'" },
+    { name = "pytest-runner", marker = "extra == 'test'" },
+    { name = "pytest-sugar", marker = "extra == 'test'" },
+    { name = "pytest-timeout", marker = "extra == 'test'" },
+    { name = "pytest-vcr", marker = "extra == 'test'" },
+    { name = "pytest-xdist", marker = "extra == 'test'" },
+    { name = "rich", marker = "extra == 'notebooks'" },
+    { name = "setuptools-scm", marker = "extra == 'dev'" },
+    { name = "sphinx", marker = "extra == 'docs'" },
+    { name = "sphinx-autobuild", marker = "extra == 'docs'" },
+    { name = "sphinx-copybutton", marker = "extra == 'docs'" },
+    { name = "sphinx-palewire-theme", marker = "extra == 'docs'" },
+    { name = "sphinxcontrib-mermaid", marker = "extra == 'docs'" },
+    { name = "tenacity" },
+    { name = "tqdm" },
+    { name = "truststore" },
+    { name = "ty", marker = "extra == 'dev'" },
+    { name = "vulture", marker = "extra == 'dev'" },
+    { name = "xlrd", marker = "extra == 'notebooks'" },
+]
+provides-extras = ["dev", "test", "docs", "notebooks"]
+
+[[package]]
 name = "fastjsonschema"
 version = "2.21.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2369,6 +2463,15 @@ wheels = [
 ]
 
 [[package]]
+name = "tenacity"
+version = "9.1.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/c6/ee486fd809e357697ee8a44d3d69222b344920433d3b6666ccd9b374630c/tenacity-9.1.4.tar.gz", hash = "sha256:adb31d4c263f2bd041081ab33b498309a57c77f9acf2db65aadf0898179cf93a", size = 49413, upload-time = "2026-02-07T10:45:33.841Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl", hash = "sha256:6095a360c919085f28c6527de529e76a06ad89b23659fa881ae0649b867a9d55", size = 28926, upload-time = "2026-02-07T10:45:32.24Z" },
+]
+
+[[package]]
 name = "termcolor"
 version = "3.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2475,12 +2578,33 @@ wheels = [
 ]
 
 [[package]]
+name = "tqdm"
+version = "4.67.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/09/a9/6ba95a270c6f1fbcd8dac228323f2777d886cb206987444e4bce66338dd4/tqdm-4.67.3.tar.gz", hash = "sha256:7d825f03f89244ef73f1d4ce193cb1774a8179fd96f31d7e1dcde62092b960bb", size = 169598, upload-time = "2026-02-03T17:35:53.048Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/16/e1/3079a9ff9b8e11b846c6ac5c8b5bfb7ff225eee721825310c91b3b50304f/tqdm-4.67.3-py3-none-any.whl", hash = "sha256:ee1e4c0e59148062281c49d80b25b67771a127c85fc9676d3be5f243206826bf", size = 78374, upload-time = "2026-02-03T17:35:50.982Z" },
+]
+
+[[package]]
 name = "traitlets"
 version = "5.14.3"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/eb/79/72064e6a701c2183016abbbfedaba506d81e30e232a68c9f0d6f6fcd1574/traitlets-5.14.3.tar.gz", hash = "sha256:9ed0579d3502c94b4b3732ac120375cda96f923114522847de4b3bb98b96b6b7", size = 161621, upload-time = "2024-04-19T11:11:49.746Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/00/c0/8f5d070730d7836adc9c9b6408dec68c6ced86b304a9b26a14df072a6e8c/traitlets-5.14.3-py3-none-any.whl", hash = "sha256:b74e89e397b1ed28cc831db7aea759ba6640cb3de13090ca145426688ff1ac4f", size = 85359, upload-time = "2024-04-19T11:11:46.763Z" },
+]
+
+[[package]]
+name = "truststore"
+version = "0.10.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/53/a3/1585216310e344e8102c22482f6060c7a6ea0322b63e026372e6dcefcfd6/truststore-0.10.4.tar.gz", hash = "sha256:9d91bd436463ad5e4ee4aba766628dd6cd7010cf3e2461756b3303710eebc301", size = 26169, upload-time = "2025-08-12T18:49:02.73Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/19/97/56608b2249fe206a67cd573bc93cd9896e1efb9e98bce9c163bcdc704b88/truststore-0.10.4-py3-none-any.whl", hash = "sha256:adaeaecf1cbb5f4de3b1959b42d41f6fab57b2b1666adb59e89cb0b53361d981", size = 18660, upload-time = "2025-08-12T18:49:01.46Z" },
 ]
 
 [[package]]
@@ -2873,85 +2997,3 @@ sdist = { url = "https://files.pythonhosted.org/packages/07/5a/377161c2d3538d199
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1a/62/c8d562e7766786ba6587d09c5a8ba9f718ed3fa8af7f4553e8f91c36f302/xlrd-2.0.2-py2.py3-none-any.whl", hash = "sha256:ea762c3d29f4cca48d82df517b6d89fbce4db3107f9d78713e48cd321d5c9aa9", size = 96555, upload-time = "2025-06-14T08:46:37.766Z" },
 ]
-
-[[package]]
-name = "your-package-name"
-source = { editable = "." }
-
-[package.optional-dependencies]
-dev = [
-    { name = "pre-commit" },
-    { name = "setuptools-scm" },
-    { name = "ty" },
-    { name = "vulture" },
-]
-docs = [
-    { name = "myst-parser" },
-    { name = "sphinx", version = "9.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "sphinx", version = "9.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "sphinx-autobuild" },
-    { name = "sphinx-copybutton" },
-    { name = "sphinx-palewire-theme" },
-    { name = "sphinxcontrib-mermaid" },
-]
-notebooks = [
-    { name = "altair" },
-    { name = "ipywidgets" },
-    { name = "jupyterlab" },
-    { name = "openpyxl" },
-    { name = "pandas" },
-    { name = "pyarrow" },
-    { name = "rich" },
-    { name = "xlrd" },
-]
-test = [
-    { name = "freezegun" },
-    { name = "hypothesis" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "pytest-env" },
-    { name = "pytest-ordering" },
-    { name = "pytest-randomly" },
-    { name = "pytest-rerunfailures" },
-    { name = "pytest-runner" },
-    { name = "pytest-sugar" },
-    { name = "pytest-timeout" },
-    { name = "pytest-vcr" },
-    { name = "pytest-xdist" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "altair", marker = "extra == 'notebooks'" },
-    { name = "freezegun", marker = "extra == 'test'" },
-    { name = "hypothesis", marker = "extra == 'test'" },
-    { name = "ipywidgets", marker = "extra == 'notebooks'" },
-    { name = "jupyterlab", marker = "extra == 'notebooks'" },
-    { name = "myst-parser", marker = "extra == 'docs'" },
-    { name = "openpyxl", marker = "extra == 'notebooks'" },
-    { name = "pandas", marker = "extra == 'notebooks'" },
-    { name = "pre-commit", marker = "extra == 'dev'" },
-    { name = "pyarrow", marker = "extra == 'notebooks'" },
-    { name = "pytest", marker = "extra == 'test'" },
-    { name = "pytest-cov", marker = "extra == 'test'" },
-    { name = "pytest-env", marker = "extra == 'test'" },
-    { name = "pytest-ordering", marker = "extra == 'test'" },
-    { name = "pytest-randomly", marker = "extra == 'test'" },
-    { name = "pytest-rerunfailures", marker = "extra == 'test'" },
-    { name = "pytest-runner", marker = "extra == 'test'" },
-    { name = "pytest-sugar", marker = "extra == 'test'" },
-    { name = "pytest-timeout", marker = "extra == 'test'" },
-    { name = "pytest-vcr", marker = "extra == 'test'" },
-    { name = "pytest-xdist", marker = "extra == 'test'" },
-    { name = "rich", marker = "extra == 'notebooks'" },
-    { name = "setuptools-scm", marker = "extra == 'dev'" },
-    { name = "sphinx", marker = "extra == 'docs'" },
-    { name = "sphinx-autobuild", marker = "extra == 'docs'" },
-    { name = "sphinx-copybutton", marker = "extra == 'docs'" },
-    { name = "sphinx-palewire-theme", marker = "extra == 'docs'" },
-    { name = "sphinxcontrib-mermaid", marker = "extra == 'docs'" },
-    { name = "ty", marker = "extra == 'dev'" },
-    { name = "vulture", marker = "extra == 'dev'" },
-    { name = "xlrd", marker = "extra == 'notebooks'" },
-]
-provides-extras = ["dev", "test", "docs", "notebooks"]
