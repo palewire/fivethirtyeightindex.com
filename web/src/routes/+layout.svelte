@@ -28,6 +28,8 @@
 <div class="page">
 	<SiteHeader />
 	<Tagline total={data.total} />
-	{@render children()}
+	<main>
+		{@render children()}
+	</main>
 	<SiteFooter />
 </div>

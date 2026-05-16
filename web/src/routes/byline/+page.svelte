@@ -17,12 +17,7 @@
 	<title>Bylines — fivethirtyeightindex.com</title>
 </svelte:head>
 
-<h1 class="section-heading">Bylines ({data.total.toLocaleString()})</h1>
-
-<p class="muted">
-	Every byline that appeared on at least one fivethirtyeight.com entry. Click a name to see
-	their work in chronological order.
-</p>
+<h1 class="section-heading">{data.total.toLocaleString()} bylines</h1>
 
 <SearchBox bind:value={query} placeholder="Search bylines…" />
 

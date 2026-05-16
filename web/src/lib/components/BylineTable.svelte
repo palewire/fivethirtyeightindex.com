@@ -15,6 +15,12 @@
 </script>
 
 <table class="entries">
+	<thead class="visually-hidden">
+		<tr>
+			<th scope="col">Byline</th>
+			<th scope="col">Entries</th>
+		</tr>
+	</thead>
 	<tbody>
 		{#each bylines as b (b.slug)}
 			<tr>

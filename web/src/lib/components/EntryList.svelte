@@ -19,6 +19,13 @@
 </script>
 
 <table class="entries">
+	<thead class="visually-hidden">
+		<tr>
+			<th scope="col">Date</th>
+			<th scope="col">Headline</th>
+			<th scope="col">Byline</th>
+		</tr>
+	</thead>
 	<tbody>
 		{#each entries as entry (entry.id)}
 			<tr>

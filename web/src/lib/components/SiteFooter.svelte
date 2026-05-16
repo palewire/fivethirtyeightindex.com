@@ -22,8 +22,11 @@
 		font-weight: var(--font-weight-light);
 	}
 
+	/* Inline footer prose — the comma-separated links blend into the
+	   surrounding gray text without an underline to call them out. */
 	footer a {
 		color: var(--color-muted);
+		text-decoration: underline;
 	}
 
 	footer a:hover {

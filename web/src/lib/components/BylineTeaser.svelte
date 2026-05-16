@@ -25,7 +25,13 @@
 			</li>
 		{/each}
 	</ul>
-	<p>
+	<p class="see-all">
 		<a href="{base}/byline/">See all {total.toLocaleString()} bylines →</a>
 	</p>
 </div>
+
+<style>
+	.see-all a {
+		text-decoration: underline;
+	}
+</style>

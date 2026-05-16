@@ -6,7 +6,7 @@
 </script>
 
 <p>
-	Search {total.toLocaleString()} pages from fivethirtyeight.com preserved by the Internet Archive
+	Explore {total.toLocaleString()} pages from fivethirtyeight.com preserved by the Internet Archive
 </p>
 
 <style>

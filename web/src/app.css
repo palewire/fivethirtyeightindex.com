@@ -6,9 +6,11 @@
    <style> block). This file owns only the design tokens, global resets,
    and a handful of widely-shared classes that more than one component
    uses (.entries, .section-heading, .browse-list, .muted, .no-results).
-*/
 
-@import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,300;0,400;0,700;0,800;1,400&display=swap');
+   The Libre Franklin font load is wired up in src/app.html via a
+   <link rel="preconnect"> + <link rel="stylesheet">, not @import here,
+   so it doesn't render-block the page on first load.
+*/
 
 :root {
 	/* Palette (palewi.re — black on white, gray accents). */
@@ -120,9 +122,19 @@ a:active {
 }
 
 .entries td {
-	padding: var(--space-xs) 0.6em var(--space-xs) 0;
+	padding: 0.35em 0.6em 0.35em 0;
 	vertical-align: top;
 	border-bottom: var(--rule-thin);
+}
+
+/* Bump click-target area on the headline + byline links so we hit
+   Lighthouse's tap-target minimums on mobile. The text stays at the
+   same size; the link's hit area expands via padding. */
+.entries .c-title a,
+.entries .c-byline a {
+	display: inline-block;
+	padding: 0.1em 0;
+	min-height: 24px;
 }
 
 .entries td:last-child {
@@ -207,6 +219,12 @@ a:active {
 	font-weight: var(--font-weight-regular);
 }
 
+/* A page-title h1 (year archive title, byline detail title) doesn't need
+   the bottom rule that delimits inline h2 sections from prose. */
+h1.section-heading {
+	border-bottom: none;
+}
+
 /* Browse lists — shared between YearList and BylineTeaser. Sized to
    match the entry table text so the homepage reads as one coherent
    list rather than two different font scales. */
@@ -218,7 +236,7 @@ a:active {
 .browse-list {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.3em 0.8em;
+	gap: 0.2em 1em;
 	margin: 0;
 	padding: 0;
 	list-style: none;
@@ -226,6 +244,13 @@ a:active {
 
 .browse-list li {
 	white-space: nowrap;
+}
+
+/* Expand link tap-targets to clear Lighthouse's 24×24 minimum. */
+.browse-list a {
+	display: inline-block;
+	padding: 0.3em 0;
+	min-height: 24px;
 }
 
 .browse-list .count {
@@ -243,4 +268,18 @@ a:active {
 .no-results {
 	padding: 1rem 0;
 	color: var(--color-muted);
+}
+
+/* Visually hide but keep accessible to screen readers (e.g. table
+   headers we don't want to render but want SR users to hear). */
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
 }

@@ -21,7 +21,10 @@
 	<title>{data.name} — fivethirtyeightindex.com</title>
 </svelte:head>
 
-<h1 class="section-heading">{data.name} ({data.entries.length.toLocaleString()} entries)</h1>
+<h1 class="section-heading">
+	{data.name}'s {data.entries.length.toLocaleString()}
+	{data.entries.length === 1 ? 'byline' : 'bylines'}
+</h1>
 
 <SearchBox bind:value={query} placeholder="Search this byline's entries…" />
 

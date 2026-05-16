@@ -36,6 +36,7 @@ log = logging.getLogger(__name__)
 
 SITE_DATA_FILE = Path("web/static/data/articles.json")
 SITE_CSV_FILE = Path("web/static/data/articles.csv")
+SITE_META_FILE = Path("web/static/data/articles-meta.json")
 
 # Capture "Nate Silver and Harry Enten", "A, B, and C", "A / B", "A | B".
 # Slash and pipe forms appear in network-attribution bylines
@@ -60,6 +61,7 @@ _NON_PERSON_BYLINES: frozenset[str] = frozenset(
         "fivethirtyeight",
         "fivethirtyeight.com",
         "abc news",
+        "abc news live",
         "staff",
         "a fivethirtyeight chat",
     }
@@ -96,8 +98,14 @@ def build(
     enriched_path: Path = ENRICHED_FILE,
     out_path: Path = SITE_DATA_FILE,
     csv_out_path: Path = SITE_CSV_FILE,
+    meta_out_path: Path = SITE_META_FILE,
 ) -> int:
-    """Build the site JSON and CSV. Returns the number of records written."""
+    """Build the site JSON, CSV, and tiny metadata file.
+
+    The metadata file (just ``{"total": N}``) is what the layout loads on
+    every page so the full 8 MB articles.json is only fetched when the
+    user actually searches.
+    """
     if not curated_path.exists():
         msg = f"curated file not found: {curated_path}. Run `curate` first."
         raise FileNotFoundError(msg)
@@ -149,6 +157,12 @@ def build(
                     r.id,
                 ]
             )
+
+    # Tiny metadata file: only the total entry count, loaded by the
+    # layout on every page (so the 8 MB articles.json stays opt-in).
+    meta_out_path.parent.mkdir(parents=True, exist_ok=True)
+    with meta_out_path.open("w", encoding="utf-8") as fh:
+        json.dump({"total": len(records)}, fh)
 
     log.info(
         "wrote %d records to %s and %s", len(records), out_path, csv_out_path
