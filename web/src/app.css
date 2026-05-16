@@ -122,23 +122,9 @@ a:active {
 }
 
 .entries td {
-	/* Asymmetric padding compensates for the half-leading + descender
-	   "ghost space" below the baseline that's mostly unused by
-	   caps-heavy headlines. Visually balances the text within the row
-	   while keeping baselines aligned across cells. */
-	padding: 0.55em 0.6em 0.3em 0;
-	vertical-align: baseline;
+	padding: 0.55em 0.6em 0.55em 0;
+	vertical-align: middle;
 	border-bottom: var(--rule-thin);
-}
-
-/* Bump click-target area on the headline + byline links so we hit
-   Lighthouse's tap-target minimums on mobile. The text stays at the
-   same size; the link's hit area expands via padding. */
-.entries .c-title a,
-.entries .c-byline a {
-	display: inline-block;
-	padding: 0.1em 0;
-	min-height: 24px;
 }
 
 .entries td:last-child {
@@ -212,7 +198,7 @@ a:active {
    Browse-by-byline menus surface above the fold. Search results and
    year/byline detail pages render their full lists. */
 @media (max-width: 640px) {
-	.opening-teaser .entries tbody tr:nth-child(n + 6) {
+	.opening-teaser .entries tbody tr:nth-child(n + 11) {
 		display: none;
 	}
 }
