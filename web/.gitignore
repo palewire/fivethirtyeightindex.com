@@ -6,5 +6,5 @@ build/
 !.env.example
 *.log
 .DS_Store
-# The data file is a build artifact; regenerate with `make site-data`.
-static/data/articles.json
+# The data file is checked in so GitHub Pages has data to deploy.
+# Regenerate it locally with `make site-data` after re-running enrich.

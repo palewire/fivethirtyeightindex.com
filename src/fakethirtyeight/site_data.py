@@ -30,6 +30,7 @@ from pathlib import Path
 
 from fakethirtyeight.curate import CURATED_FILE
 from fakethirtyeight.enrich import ENRICHED_FILE
+from fakethirtyeight.metadata import _clean_title
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +124,9 @@ def _build_record(
     url = curated_row.get("url") or ""
 
     if enrich_row:
-        title = enrich_row.get("title") or ""
+        # Re-clean titles to apply any extractor improvements that landed
+        # after enrich.csv was written (e.g., Blogspot-era prefix stripping).
+        title = _clean_title(enrich_row.get("title") or "")
         byline = enrich_row.get("byline") or ""
         date = enrich_row.get("published_at") or ""
         wayback_url = enrich_row.get("wayback_url") or ""

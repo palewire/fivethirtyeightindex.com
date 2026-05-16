@@ -35,6 +35,20 @@ def test_extract_title_strips_site_suffix():
     assert md.title == "The Real MVP"
 
 
+def test_extract_title_strips_blogspot_era_prefix():
+    html = (
+        b"<html><head><title>FiveThirtyEight.com: Politics Done Right: Live from Invesco</title></head></html>"
+    )
+    md = extract(html)
+    assert md.title == "Live from Invesco"
+
+    html2 = b"<html><head><title>FiveThirtyEight: Politics Done Right: Open Discussion</title></head></html>"
+    assert extract(html2).title == "Open Discussion"
+
+    html3 = b"<html><head><title>FiveThirtyEight: Some Standalone Title</title></head></html>"
+    assert extract(html3).title == "Some Standalone Title"
+
+
 def test_extract_byline_joins_multiple_authors():
     html = b"""
     <html><head>

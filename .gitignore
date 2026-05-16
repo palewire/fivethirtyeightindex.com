@@ -1,8 +1,8 @@
 # AI stuff
 .claude
 
-# Crawl output
-data/
+# Crawl output (only the top-level data/ directory, not e.g. web/static/data/).
+/data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

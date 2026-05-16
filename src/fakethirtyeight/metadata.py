@@ -40,6 +40,16 @@ _TITLE_SITE_SUFFIXES = (
     " :: FiveThirtyEight",
 )
 
+#: The Nate Silver Blogspot era (2008–2010) prepended the site name + tagline
+#: to every ``<title>`` tag, e.g.:
+#:     "FiveThirtyEight.com: Politics Done Right: Live from Invesco: ..."
+#: Strip those prefixes so the headline alone shows up.
+_TITLE_SITE_PREFIXES = re.compile(
+    r"^FiveThirtyEight(?:\.com)?\s*:\s*"
+    r"(?:Politics\s+Done\s+Right\s*:\s*)?",
+    re.IGNORECASE,
+)
+
 _WP_DATE_FROM_PATH = re.compile(r"^/(?P<year>20\d{2})/(?P<month>\d{2})/")
 
 
@@ -124,7 +134,8 @@ def _clean_title(raw: str) -> str:
         if s.endswith(suffix):
             s = s[: -len(suffix)].strip()
             break
-    return s
+    s = _TITLE_SITE_PREFIXES.sub("", s, count=1)
+    return s.strip()
 
 
 # ---------------------------------------------------------------------------
