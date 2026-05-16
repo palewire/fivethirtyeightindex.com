@@ -20,8 +20,8 @@
 		])
 	);
 
-	// Seed results with an empty array; the homepage shows `data.recent`
-	// below until the user types a query.
+	// Seed results with an empty array; the homepage shows `data.opening`
+	// (oldest entries) below until the user types a query.
 	let results = $state<Entry[] | SearchResult[]>([]);
 	let allEntries: Entry[] | null = null;
 	let searched = $state(false);
@@ -93,8 +93,11 @@
 		<EntryList entries={results as Entry[]} />
 	{/if}
 {:else}
-	<h2 class="section-heading">Recent</h2>
-	<EntryList entries={data.recent} />
+	<EntryList entries={data.opening} />
+	<p class="muted">
+		Showing the first {data.opening.length} entries chronologically. Browse a specific
+		year below, or search above.
+	</p>
 {/if}
 
 {#if !searched}

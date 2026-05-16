@@ -92,8 +92,10 @@ def build(
                 continue
             records.append(record)
 
-    # Sort: newest first, then alphabetical title for stability.
-    records.sort(key=lambda r: (r.date or "", r.title), reverse=True)
+    # Sort: oldest first. This is a retrospective archive — chronological
+    # reading order makes more sense than newest-first.
+    # Records with no date sort to the end (treat "" as the highest value).
+    records.sort(key=lambda r: (r.date or "￿", r.title))
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as fh:

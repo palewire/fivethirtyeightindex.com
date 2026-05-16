@@ -14,6 +14,8 @@ export const load: PageLoad = async ({ fetch }) => {
 		years: cache.years,
 		topBylines: byByline.slice(0, 40),
 		totalBylines: byByline.length,
-		recent: cache.all.slice(0, 50)
+		// `cache.all` is sorted oldest-first; the first slice is "from the
+		// beginning" — appropriate for a retrospective.
+		opening: cache.all.slice(0, 50)
 	};
 };

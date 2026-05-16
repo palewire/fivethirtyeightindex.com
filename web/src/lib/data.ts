@@ -85,7 +85,8 @@ export async function loadEntries(fetcher?: typeof fetch): Promise<DataCache> {
 		}
 	}
 
-	const years = [...byYear.keys()].sort((a, b) => b - a);
+	// Oldest year first — this is a chronological retrospective.
+	const years = [...byYear.keys()].sort((a, b) => a - b);
 
 	cache = { all, byId, byYear, byBylineSlug, years };
 	return cache;
