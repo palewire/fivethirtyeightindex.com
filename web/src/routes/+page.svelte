@@ -61,6 +61,7 @@
 <p class="tagline">
 	An index of every fivethirtyeight.com article, liveblog, project, video, podcast, and
 	methodology page preserved by the Internet Archive. {data.total.toLocaleString()} entries.
+	<a href="{base}/data/articles.csv" class="muted-link">Download as CSV →</a>
 </p>
 
 <form class="search" onsubmit={(e) => e.preventDefault()}>

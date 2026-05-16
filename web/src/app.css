@@ -56,7 +56,7 @@ a:active {
 }
 
 .page {
-	max-width: 755px;
+	max-width: 1200px;
 	margin: 0 auto;
 	padding: 0 20px 2rem;
 }
@@ -141,63 +141,101 @@ a:active {
 	vertical-align: middle;
 }
 
-/* Entries list — numbered, dense, with a small gray meta line. */
+/* Entries table — condensed, HN/baseball-reference style.
+   Three columns: date | headline | byline. No numbering. */
 .entries {
-	list-style: none;
-	padding: 0;
+	width: 100%;
+	border-collapse: collapse;
 	margin: 0 0 1.5rem;
-	counter-reset: entry;
-}
-
-.entries li {
-	padding: 0.45em 0 0.45em 2.4em;
-	position: relative;
-	counter-increment: entry;
-	border-bottom: 1px solid var(--rule);
-}
-
-.entries li::before {
-	content: counter(entry) '.';
-	position: absolute;
-	left: 0;
-	top: 0.45em;
-	width: 2em;
-	text-align: right;
-	color: var(--fg-meta);
-	font-variant-numeric: tabular-nums;
-	font-weight: 400;
-}
-
-.entries li > a {
-	font-weight: 400;
-	color: var(--fg);
-}
-
-.entries li > a:visited {
-	color: var(--fg-meta);
-}
-
-.entries li > a:hover {
-	text-decoration: underline;
-}
-
-.entries .meta {
-	color: var(--fg-meta);
-	font-size: 0.7em;
-	margin-top: 0.1em;
+	font-size: 0.8em; /* ≈16px against the 20px body */
 	line-height: 1.4;
 }
 
-.entries .meta a {
+.entries td {
+	padding: 0.18em 0.6em 0.18em 0;
+	vertical-align: top;
+	border-bottom: 1px solid var(--rule);
+}
+
+.entries td:last-child {
+	padding-right: 0;
+}
+
+.entries .c-date {
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+	color: var(--fg-meta);
+	width: 6.5em;
+}
+
+.entries .c-title a {
+	color: var(--fg);
+	font-weight: 400;
+}
+
+.entries .c-title a:visited {
 	color: var(--fg-meta);
 }
 
-.entries .meta a:hover {
+.entries .c-title a:hover {
+	text-decoration: underline;
+}
+
+.entries .c-kind {
+	font-style: italic;
+	font-size: 0.85em;
+	color: var(--fg-meta);
+	margin-left: 0.25em;
+}
+
+.entries .c-byline {
+	color: var(--fg-meta);
+	white-space: nowrap;
+	max-width: 22em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	text-align: right;
+}
+
+.entries .c-byline a {
+	color: var(--fg-meta);
+}
+
+.entries .c-byline a:hover {
 	color: var(--fg);
 }
 
-.entries .kind {
-	font-style: italic;
+@media (max-width: 640px) {
+	/* On narrow screens, stack each row's cells into a tighter card. */
+	.entries,
+	.entries tbody,
+	.entries tr,
+	.entries td {
+		display: block;
+		width: auto;
+	}
+
+	.entries tr {
+		padding: 0.4em 0;
+		border-bottom: 1px solid var(--rule);
+	}
+
+	.entries td {
+		padding: 0;
+		border-bottom: none;
+	}
+
+	.entries .c-date,
+	.entries .c-byline {
+		font-size: 0.85em;
+		text-align: left;
+		white-space: normal;
+		max-width: none;
+	}
+
+	.entries .c-byline::before {
+		content: 'by ';
+	}
 }
 
 .section-heading {

@@ -20,7 +20,7 @@
 		<a href="https://web.archive.org/" rel="noopener external" target="_blank"
 			>archive.org's Wayback Machine</a
 		>. Headlines link to Wayback snapshots — articles are not republished here.
-		Source on
+		<a href="{base}/data/articles.csv">Download the full index as CSV</a>. Source on
 		<a
 			href="https://github.com/palewire/fakethirtyeight.com"
 			rel="noopener external"

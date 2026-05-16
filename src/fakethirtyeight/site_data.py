@@ -35,6 +35,7 @@ from fakethirtyeight.metadata import _clean_title
 log = logging.getLogger(__name__)
 
 SITE_DATA_FILE = Path("web/static/data/articles.json")
+SITE_CSV_FILE = Path("web/static/data/articles.csv")
 
 # Capture "Nate Silver and Harry Enten" or "A, B, and C" or "A, B" forms.
 _BYLINE_SPLIT = re.compile(r"\s*(?:,\s*and\s+|,\s*|\s+and\s+)\s*", re.IGNORECASE)
@@ -69,8 +70,9 @@ def build(
     curated_path: Path = CURATED_FILE,
     enriched_path: Path = ENRICHED_FILE,
     out_path: Path = SITE_DATA_FILE,
+    csv_out_path: Path = SITE_CSV_FILE,
 ) -> int:
-    """Build the site JSON. Returns the number of records written."""
+    """Build the site JSON and CSV. Returns the number of records written."""
     if not curated_path.exists():
         msg = f"curated file not found: {curated_path}. Run `curate` first."
         raise FileNotFoundError(msg)
@@ -102,7 +104,30 @@ def build(
     with out_path.open("w", encoding="utf-8") as fh:
         json.dump([r.to_dict() for r in records], fh, ensure_ascii=False)
 
-    log.info("wrote %d records to %s", len(records), out_path)
+    # Also write a flat CSV — useful for spreadsheets and one-off analyses.
+    csv_out_path.parent.mkdir(parents=True, exist_ok=True)
+    with csv_out_path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(
+            ["date", "year", "kind", "title", "byline", "authors", "url", "id"]
+        )
+        for r in records:
+            writer.writerow(
+                [
+                    r.date,
+                    r.year if r.year is not None else "",
+                    r.kind,
+                    r.title,
+                    r.byline,
+                    "; ".join(r.authors),
+                    r.url,
+                    r.id,
+                ]
+            )
+
+    log.info(
+        "wrote %d records to %s and %s", len(records), out_path, csv_out_path
+    )
     return len(records)
 
 
