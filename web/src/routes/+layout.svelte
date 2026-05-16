@@ -9,7 +9,7 @@
 		<strong><a href="{base}/">fakethirtyeight.com</a></strong>
 		<nav>
 			<a href="{base}/">index</a>
-			<a href="{base}/about/">about</a>
+			<a href="{base}/byline/">bylines</a>
 		</nav>
 	</header>
 

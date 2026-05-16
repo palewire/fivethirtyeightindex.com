@@ -110,16 +110,17 @@
 		</p>
 	</div>
 
-	<h2 class="section-heading">
-		Browse by byline <span class="count"
-			>(top {data.topBylines.length} of {data.totalBylines.toLocaleString()})</span
-		>
-	</h2>
+	<h2 class="section-heading">Browse by byline</h2>
 	<div class="browse-block">
 		<p class="browse-list">
 			{#each data.topBylines as b (b.slug)}
 				<a href="{base}/byline/{b.slug}/">{b.name}</a><span class="count"> ({b.count})</span>
 			{/each}
+		</p>
+		<p>
+			<a href="{base}/byline/"
+				>See all {data.totalBylines.toLocaleString()} bylines →</a
+			>
 		</p>
 	</div>
 {/if}
