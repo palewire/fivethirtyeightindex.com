@@ -220,37 +220,53 @@ def _is_junk_record(record: SiteRecord) -> bool:
 _REVISION_SLUG_SUFFIX = re.compile(r"_\d+$")
 
 
-def _article_canonical_score(record: SiteRecord) -> tuple[int, int, str]:
-    """Sort key for picking the canonical row out of an article dupe group.
-
-    Higher tuples win. Priority: avoid `_N` revision suffix, then longer
-    slug (the truncated-slug variant of the same article loses), then
-    alphabetical id for stable tie-breaking.
-    """
-    slug = record.id.split(":", 1)[1] if ":" in record.id else record.id
-    not_revision = 0 if _REVISION_SLUG_SUFFIX.search(slug) else 1
-    return (not_revision, len(slug), slug)
+#: Kinds eligible for cross-publish dedup at the site_data step. Article
+#: and video are the same FT segment under two URLs (`/features/<slug>`
+#: and `/videos/<slug>`) — the article version wins because it carries
+#: the full text plus an embed. Project / methodology / podcast / liveblog
+#: stay out: project drilldowns sharing a generic title aren't dupes, and
+#: the methodology + article pair (4 cases) covers genuinely different
+#: content even when slugs match.
+_DEDUPE_KINDS: frozenset[str] = frozenset({"article", "video"})
 
 
 def _dedupe_articles(records: list[SiteRecord]) -> list[SiteRecord]:
-    """Collapse article rows that share title+byline+date.
+    """Collapse rows that share title+byline+date.
 
-    These come from WordPress draft revisions, truncated slugs from the
-    early CMS, and editor typo-fixes that left both slugs live. Non-article
-    kinds aren't touched — same-titled project drilldowns are legitimate
-    separate entries.
+    Same-article slug variants: WordPress draft revisions, truncated slugs
+    from the early CMS, and editor typo-fixes that left both URLs live.
+    Cross-publish: FiveThirtyEight republished hundreds of segments as
+    both /features/<slug> (article) and /videos/<slug> (video); the
+    article carries the writeup + embedded player, so it wins. Kinds not
+    in :data:`_DEDUPE_KINDS` are passed through unchanged.
     """
     groups: dict[tuple[str, str, str], list[SiteRecord]] = {}
     out: list[SiteRecord] = []
     for r in records:
-        if r.kind != "article" or not r.title or not r.date:
+        if r.kind not in _DEDUPE_KINDS or not r.title or not r.date:
             out.append(r)
             continue
         key = (r.title.strip().lower(), r.byline.strip().lower(), r.date[:10])
         groups.setdefault(key, []).append(r)
     for group in groups.values():
-        out.append(max(group, key=_article_canonical_score))
+        out.append(max(group, key=_canonical_score))
     return out
+
+
+def _canonical_score(record: SiteRecord) -> tuple[int, int, int, str]:
+    """Sort key for picking the canonical row out of a dedup group.
+
+    Higher tuples win. Priority order:
+    1. Article kind beats video (richer text content, /features/ URL).
+    2. Avoid the `_N` WordPress revision suffix.
+    3. Prefer the longer slug (a truncated variant of the same article
+       loses to its full sibling).
+    4. Alphabetical id as a stable tie-break.
+    """
+    slug = record.id.split(":", 1)[1] if ":" in record.id else record.id
+    is_article = 1 if record.kind == "article" else 0
+    not_revision = 0 if _REVISION_SLUG_SUFFIX.search(slug) else 1
+    return (is_article, not_revision, len(slug), slug)
 
 
 def _build_record(
