@@ -76,6 +76,10 @@ _COMMENT_PAGE = re.compile(r"/comment-page-\d+/?$")
 _NYT_PERMALINK = re.compile(
     r"^/(?P<year>20\d{2})/(?P<month>\d{2})/(?P<day>\d{2})/(?P<slug>[^/]+?)/?$"
 )
+# Megaphone hosts each episode under a stable `ESP<digits>` ID. The same ID
+# appears in feeds.megaphone.fm/<ID>, traffic.megaphone.fm/<ID>.mp3, and inside
+# the podtrac/pscrb tracking-redirect URLs that wrap the audio.
+_MEGAPHONE_EP_ID = re.compile(r"(ESP\d+)", re.IGNORECASE)
 
 _NUMERIC = re.compile(r"^\d+$")
 
@@ -122,6 +126,25 @@ def classify(url: str, host: str | None = None) -> Classification:
 
     # Strip ``www.`` so the main-host rules apply uniformly.
     bare_host = h[4:] if h.startswith("www.") else h
+
+    # ---- podcast hosts (Megaphone + redirect wrappers) -----------------
+    # The FiveThirtyEight Politics show was hosted on Megaphone; episode
+    # audio URLs cycle through podtrac → pscrb.fm → traffic.megaphone.fm,
+    # all of which embed the same `ESP<digits>` episode ID. Rolling up by
+    # that ID merges duplicates across the redirect chain and across
+    # multiple captures of the same episode.
+    if bare_host in {
+        "feeds.megaphone.fm",
+        "traffic.megaphone.fm",
+        "podtrac.com",
+        "www.podtrac.com",
+        "pscrb.fm",
+    } or "megaphone.fm" in bare_host:
+        m = _MEGAPHONE_EP_ID.search(url)
+        if m:
+            return Classification(
+                KIND_PODCAST, f"podcast:meg/{m.group(1).upper()}"
+            )
 
     # ---- fivethirtyeight.blogs.nytimes.com (NYT era, 2010-2014) ---------
     # Permalinks were /YYYY/MM/DD/<slug>/. Roll up by slug into the same

@@ -141,6 +141,24 @@ CASES: list[tuple[str, str, str]] = [
         KIND_ARTICLE,
         "article:some-slug",
     ),
+    # Podcast (Megaphone) — same episode reached via direct host,
+    # traffic. variant, or podtrac/pscrb redirect chain all roll up
+    # to the same ESP-ID key.
+    (
+        "https://feeds.megaphone.fm/ESP9835845353",
+        KIND_PODCAST,
+        "podcast:meg/ESP9835845353",
+    ),
+    (
+        "https://traffic.megaphone.fm/ESP9835845353.mp3",
+        KIND_PODCAST,
+        "podcast:meg/ESP9835845353",
+    ),
+    (
+        "https://www.podtrac.com/pts/redirect.mp3/pscrb.fm/rss/p/traffic.megaphone.fm/ESP9835845353.mp3?updated=1",
+        KIND_PODCAST,
+        "podcast:meg/ESP9835845353",
+    ),
     # Section landings
     ("https://fivethirtyeight.com/politics/", KIND_SECTION, "section:politics"),
     (

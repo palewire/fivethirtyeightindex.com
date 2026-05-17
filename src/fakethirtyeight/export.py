@@ -35,9 +35,9 @@ def to_jsonl(out_path: Path, *, index_path: Path = INDEX_FILE) -> int:
 def to_parquet(out_path: Path, *, index_path: Path = INDEX_FILE) -> int:
     """Convert to Parquet. Requires `pyarrow` (in the notebooks extras)."""
     try:
-        import pyarrow as pa
-        import pyarrow.csv as pa_csv
-        import pyarrow.parquet as pq
+        import pyarrow as pa  # ty: ignore[unresolved-import]
+        import pyarrow.csv as pa_csv  # ty: ignore[unresolved-import]
+        import pyarrow.parquet as pq  # ty: ignore[unresolved-import]
     except ImportError as exc:
         msg = "Parquet export needs pyarrow. Install with: pip install '.[notebooks]'"
         raise RuntimeError(msg) from exc

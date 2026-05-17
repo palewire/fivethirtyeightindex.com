@@ -207,8 +207,9 @@ def rescrape_dates(
     for idx, row in enumerate(rows):
         d = row.get("published_at") or ""
         # YYYY-MM is exactly 7 chars; anything richer (YYYY-MM-DD or full
-        # ISO) is already at the precision we want.
-        if len(d) != 7 or d[4] != "-":
+        # ISO) is already at the precision we want. Slice (not index) so
+        # short/empty strings short-circuit without an IndexError.
+        if len(d) != 7 or d[4:5] != "-":
             continue
         url = row.get("url") or ""
         ts = row.get("snapshot_timestamp") or ""

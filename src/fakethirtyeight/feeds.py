@@ -256,8 +256,29 @@ def _fetch(client: httpx.Client, url: str) -> bytes:
 _BY_PREFIX = re.compile(r"^by\s+", re.IGNORECASE)
 
 
+#: Megaphone publishes mp3s through a podtrac → pscrb.fm → traffic.megaphone
+#: redirect chain. Pull the canonical episode ID out of any layer so two
+#: captures of the same episode (even via different redirect intermediaries)
+#: collapse to one row.
+_MEGAPHONE_EP = re.compile(r"(ESP\d+)", re.IGNORECASE)
+
+
+def _canonical_enclosure(url: str) -> str:
+    """Strip tracking-redirect wrappers from a podcast enclosure URL."""
+    m = _MEGAPHONE_EP.search(url)
+    if m:
+        return f"https://traffic.megaphone.fm/{m.group(1).upper()}.mp3"
+    # Fall back to the bare URL minus query params.
+    return url.split("?", 1)[0]
+
+
 def _parse_feed(body: bytes) -> list[FeedEntry]:
-    """Parse RSS 2.0 or Atom XML; return entries with metadata.
+    """Parse RSS 2.0, Atom, or podcast XML; return entries with metadata.
+
+    Podcast feeds (Megaphone, Libsyn, Art19) typically omit per-item ``<link>``
+    and put the audio URL on ``<enclosure url=...>``. When the link is missing
+    but an enclosure is present, the enclosure URL stands in as the entry's
+    canonical URL after redirect-stripping.
 
     Tolerates parse errors and unknown formats by returning an empty list.
     """
@@ -267,14 +288,16 @@ def _parse_feed(body: bytes) -> list[FeedEntry]:
         return []
 
     entries: list[FeedEntry] = []
-    # RSS 2.0: <rss><channel><item>...
+    # RSS 2.0: <rss><channel><item>...; Atom: <feed><entry>...
     for item in root.iter():
         local = _localname(item.tag)
         if local not in {"item", "entry"}:
             continue
         url = ""
+        enclosure_url = ""
         title = ""
         byline = ""
+        itunes_author = ""
         pub = ""
         for child in item:
             tag = _localname(child.tag)
@@ -283,12 +306,24 @@ def _parse_feed(body: bytes) -> list[FeedEntry]:
                 # RSS link is text; Atom link is href attribute.
                 href = child.get("href")
                 url = url or (href if isinstance(href, str) and href else text)
+            elif tag == "enclosure":
+                enclosure_url = enclosure_url or (child.get("url") or "")
             elif tag == "title" and not title:
                 title = text
+            elif tag == "author" and "itunes" in (child.tag or "").lower():
+                itunes_author = itunes_author or text
             elif tag in {"creator", "author"} and not byline:
                 byline = _BY_PREFIX.sub("", text).strip()
             elif tag in {"pubDate", "published", "updated"} and not pub:
                 pub = _normalize_pub(text)
+        # Podcast fallback: no <link>, but an audio enclosure is present.
+        if not url and enclosure_url:
+            url = _canonical_enclosure(enclosure_url)
+        # Prefer the explicit dc:creator byline; otherwise fall back to
+        # itunes:author (which on Megaphone feeds is the show-level credit
+        # string, but still useful).
+        if not byline and itunes_author:
+            byline = _BY_PREFIX.sub("", itunes_author).strip()
         if url and (title or pub):
             entries.append(
                 FeedEntry(
