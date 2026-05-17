@@ -4,7 +4,36 @@ from __future__ import annotations
 
 import pytest
 
-from fakethirtyeight.site_data import _split_authors, _title_from_url, slugify
+from fakethirtyeight.site_data import (
+    _split_authors,
+    _title_from_url,
+    _year_from_url,
+    slugify,
+)
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        # Cycle-year project slugs are the main motivation for the fallback.
+        ("https://projects.fivethirtyeight.com/2024-election-forecast/", 2024),
+        ("https://projects.fivethirtyeight.com/2018-midterm-election-forecast/", 2018),
+        ("https://projects.fivethirtyeight.com/election-2016/primary-forecast/", 2016),
+        # Multi-year paths take the latest plausible year.
+        (
+            "https://projects.fivethirtyeight.com/checking-our-work/2020-elections/",
+            2020,
+        ),
+        # No year-like substring → None.
+        ("https://fivethirtyeight.com/features/some-slug/", None),
+        ("", None),
+        # Out-of-range 4-digit substrings (zip code, count) are rejected.
+        ("https://example.com/zip/90210/", None),
+        ("https://example.com/n/1979/", None),
+    ],
+)
+def test_year_from_url(url: str, expected: int | None):
+    assert _year_from_url(url) == expected
 
 
 @pytest.mark.parametrize(

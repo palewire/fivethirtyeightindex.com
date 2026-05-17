@@ -291,7 +291,7 @@ def _build_record(
     # and the CSV alike. If no real authors survive the scrub, blank the
     # display byline too.
     byline = _join_authors(authors)
-    year = _year_from_date(date)
+    year = _year_from_date(date) or _year_from_url(url)
 
     final_url = wayback_url or url
     if not final_url:
@@ -361,6 +361,36 @@ def _year_from_date(date: str) -> int | None:
     if head.isdigit():
         return int(head)
     return None
+
+
+#: 538-era plausible publication years. Used to filter spurious 4-digit
+#: matches in URLs (e.g. zip codes, sample sizes, ticket IDs).
+_URL_YEAR = re.compile(r"(?<!\d)(20[0-2]\d)(?!\d)")
+
+
+def _year_from_url(url: str) -> int | None:
+    """Fallback year derivation for SPA/no-metadata pages.
+
+    Many project URLs encode the cycle year (``/election-2016/``,
+    ``/2024-election-forecast/``); use that when we have nothing better.
+    Only emit years between 2008 (site launch) and the current decade so
+    we don't pick up incidental 4-digit substrings.
+    """
+    if not url:
+        return None
+    from urllib.parse import urlsplit
+
+    path = urlsplit(url).path or ""
+    matches = _URL_YEAR.findall(path)
+    if not matches:
+        return None
+    # Prefer the *latest* plausible year in the path — projects with
+    # multi-cycle slugs like ``/2024-election-forecast/`` should bucket
+    # by the active cycle, not by a historical reference.
+    candidates = [int(m) for m in matches if 2008 <= int(m) <= 2029]
+    if not candidates:
+        return None
+    return max(candidates)
 
 
 def _title_from_url(url: str) -> str:

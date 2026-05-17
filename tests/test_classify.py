@@ -130,6 +130,13 @@ CASES: list[tuple[str, str, str]] = [
         KIND_LIVEBLOG,
         "liveblog:2016-election-results-coverage",
     ),
+    # Bare /live-blog/ is the section landing, not an editorial post — must
+    # not surface as an empty-slug `liveblog:` rollup.
+    (
+        "http://fivethirtyeight.com/live-blog/",
+        KIND_SECTION,
+        "section:live-blog",
+    ),
     # NYT-era post (2010-2014) — slug-only rollup namespace.
     (
         "http://fivethirtyeight.blogs.nytimes.com/2012/05/30/economically-obama-is-no-jimmy-carter/",

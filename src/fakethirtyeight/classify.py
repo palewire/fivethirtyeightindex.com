@@ -213,7 +213,10 @@ def classify(url: str, host: str | None = None) -> Classification:
             if len(segs) >= 2:
                 slug = re.sub(r"[-\s]+", "-", unquote(segs[1])).strip("-")
                 return Classification(KIND_LIVEBLOG, f"liveblog:{slug}")
-            return Classification(KIND_LIVEBLOG, "liveblog:")
+            # Bare `/live-blog/` is the section landing, not an editorial
+            # post — emit it as a section so it doesn't pollute the corpus
+            # with an empty-slug entry.
+            return Classification(KIND_SECTION, "section:live-blog")
 
         # Features + DataLab era articles share slugs; roll up together.
         if first in {"features", "datalab"}:
