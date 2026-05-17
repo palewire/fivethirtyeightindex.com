@@ -107,38 +107,32 @@ def rescrape_bylines(
 
     ensure_dirs()
 
-    # Load existing rows, identify which need rescraping.
-    rows: list[dict[str, str]] = []
-    fieldnames: list[str] = []
+    rows, fieldnames = _load_all_rows(enriched_path)
     targets: list[tuple[int, EnrichTarget]] = []
-    with enriched_path.open(newline="", encoding="utf-8") as fh:
-        reader = csv.DictReader(fh)
-        fieldnames = list(reader.fieldnames or ENRICHED_FIELDS)
-        for row in reader:
-            rows.append(row)
-            if row.get("error"):
-                continue
-            if row.get("byline"):
-                continue
-            if (row.get("kind") or "") not in kinds:
-                continue
-            url = row.get("url") or ""
-            ts = row.get("snapshot_timestamp") or ""
-            if not url or not ts:
-                continue
-            targets.append(
-                (
-                    len(rows) - 1,
-                    EnrichTarget(
-                        rollup_key=row.get("rollup_key") or "",
-                        kind=row.get("kind") or "",
-                        url=url,
-                        timestamp=ts,
-                    ),
-                )
+    for idx, row in enumerate(rows):
+        if row.get("error"):
+            continue
+        if row.get("byline"):
+            continue
+        if (row.get("kind") or "") not in kinds:
+            continue
+        url = row.get("url") or ""
+        ts = row.get("snapshot_timestamp") or ""
+        if not url or not ts:
+            continue
+        targets.append(
+            (
+                idx,
+                EnrichTarget(
+                    rollup_key=row.get("rollup_key") or "",
+                    kind=row.get("kind") or "",
+                    url=url,
+                    timestamp=ts,
+                ),
             )
-            if limit and len(targets) >= limit:
-                break
+        )
+        if limit and len(targets) >= limit:
+            break
 
     if not targets:
         log.info("no candidates to rescrape")
@@ -208,36 +202,31 @@ def rescrape_dates(
 
     ensure_dirs()
 
-    rows: list[dict[str, str]] = []
-    fieldnames: list[str] = []
+    rows, fieldnames = _load_all_rows(enriched_path)
     targets: list[tuple[int, EnrichTarget]] = []
-    with enriched_path.open(newline="", encoding="utf-8") as fh:
-        reader = csv.DictReader(fh)
-        fieldnames = list(reader.fieldnames or ENRICHED_FIELDS)
-        for row in reader:
-            rows.append(row)
-            d = row.get("published_at") or ""
-            # YYYY-MM is exactly 7 chars; anything richer (YYYY-MM-DD or
-            # full ISO) is already at the precision we want.
-            if len(d) != 7 or d[4] != "-":
-                continue
-            url = row.get("url") or ""
-            ts = row.get("snapshot_timestamp") or ""
-            if not url or not ts:
-                continue
-            targets.append(
-                (
-                    len(rows) - 1,
-                    EnrichTarget(
-                        rollup_key=row.get("rollup_key") or "",
-                        kind=row.get("kind") or "",
-                        url=url,
-                        timestamp=ts,
-                    ),
-                )
+    for idx, row in enumerate(rows):
+        d = row.get("published_at") or ""
+        # YYYY-MM is exactly 7 chars; anything richer (YYYY-MM-DD or full
+        # ISO) is already at the precision we want.
+        if len(d) != 7 or d[4] != "-":
+            continue
+        url = row.get("url") or ""
+        ts = row.get("snapshot_timestamp") or ""
+        if not url or not ts:
+            continue
+        targets.append(
+            (
+                idx,
+                EnrichTarget(
+                    rollup_key=row.get("rollup_key") or "",
+                    kind=row.get("kind") or "",
+                    url=url,
+                    timestamp=ts,
+                ),
             )
-            if limit and len(targets) >= limit:
-                break
+        )
+        if limit and len(targets) >= limit:
+            break
 
     if not targets:
         log.info("no YYYY-MM rows to rescrape")
@@ -309,36 +298,29 @@ def retry_failed(
 
     ensure_dirs()
 
-    rows: list[dict[str, str]] = []
-    fieldnames: list[str] = []
+    rows, fieldnames = _load_all_rows(enriched_path)
     targets: list[tuple[int, EnrichTarget]] = []
-    with enriched_path.open(newline="", encoding="utf-8") as fh:
-        reader = csv.DictReader(fh)
-        fieldnames = list(reader.fieldnames or ENRICHED_FIELDS)
-        for row in reader:
-            rows.append(row)
-            has_metadata = any(
-                row.get(k) for k in ("title", "byline", "published_at")
+    for idx, row in enumerate(rows):
+        has_metadata = any(row.get(k) for k in ("title", "byline", "published_at"))
+        if not row.get("error") and has_metadata:
+            continue
+        url = row.get("url") or ""
+        ts = row.get("snapshot_timestamp") or ""
+        if not url or not ts:
+            continue
+        targets.append(
+            (
+                idx,
+                EnrichTarget(
+                    rollup_key=row.get("rollup_key") or "",
+                    kind=row.get("kind") or "",
+                    url=url,
+                    timestamp=ts,
+                ),
             )
-            if not row.get("error") and has_metadata:
-                continue
-            url = row.get("url") or ""
-            ts = row.get("snapshot_timestamp") or ""
-            if not url or not ts:
-                continue
-            targets.append(
-                (
-                    len(rows) - 1,
-                    EnrichTarget(
-                        rollup_key=row.get("rollup_key") or "",
-                        kind=row.get("kind") or "",
-                        url=url,
-                        timestamp=ts,
-                    ),
-                )
-            )
-            if limit and len(targets) >= limit:
-                break
+        )
+        if limit and len(targets) >= limit:
+            break
 
     if not targets:
         log.info("no failed rows to retry")
@@ -480,6 +462,24 @@ def _iter_targets(
 
 def _load_done(out_path: Path) -> set[str]:
     return set(load_enriched(out_path).keys())
+
+
+def _load_all_rows(path: Path) -> tuple[list[dict[str, str]], list[str]]:
+    """Read every row from ``enriched.csv`` into memory.
+
+    The in-place rescrape functions (rescrape_bylines, rescrape_dates,
+    retry_failed) all need the *full* row list so the write-back at the
+    end doesn't drop rows. Loading separately from target selection avoids
+    a subtle bug where a ``limit`` short-circuit broke out of the read
+    loop early and the subsequent overwrite truncated the file.
+    """
+    rows: list[dict[str, str]] = []
+    with path.open(newline="", encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        fieldnames = list(reader.fieldnames or ENRICHED_FIELDS)
+        for row in reader:
+            rows.append(row)
+    return rows, fieldnames
 
 
 def _current_rollup_key(url: str, fallback: str) -> str:
