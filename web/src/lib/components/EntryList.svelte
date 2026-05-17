@@ -163,12 +163,15 @@
 					<a href={entry.url} rel="noopener external" target="_blank">{entry.title}</a>
 				</td>
 				{#if showByline}<td class="c-byline">
-					{#each entry.authors as name, i (name)}
-						<a href="{base}/byline/{slugify(name)}/">{name}</a>{i < entry.authors.length - 1
-							? ', '
-							: ''}
-					{/each}
-					{#if entry.authors.length === 0 && entry.byline}{entry.byline}{/if}
+					{#if entry.authors.length > 0}
+						{#each entry.authors as name, i (name)}
+							<a href="{base}/byline/{slugify(name)}/">{name}</a>{i < entry.authors.length - 1
+								? ', '
+								: ''}
+						{/each}
+					{:else}
+						{displayByline(entry)}
+					{/if}
 				</td>{/if}
 			</tr>
 		{/each}
