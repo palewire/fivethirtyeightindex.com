@@ -12,6 +12,7 @@ dependencies = [
     "click",
     "httpx",
     "lxml",
+    "python-dotenv",
     "tenacity",
     "tqdm",
     "truststore",
