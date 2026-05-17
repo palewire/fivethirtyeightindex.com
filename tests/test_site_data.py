@@ -28,6 +28,7 @@ from fakethirtyeight.site_data import (
 )
 def test_drilldown_suffix(rollup_key: str, expected: str):
     from fakethirtyeight.site_data import _drilldown_suffix
+
     assert _drilldown_suffix(rollup_key) == expected
 
 

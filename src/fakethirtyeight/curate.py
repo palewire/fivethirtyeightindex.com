@@ -126,10 +126,15 @@ def _is_qualifying(row: dict[str, str]) -> bool:
     mimetype = row.get("latest_mimetype") or ""
     if status == "200" and mimetype == "text/html":
         return True
-    if not status and not mimetype and (row.get("kind") or "") in {
-        "article",
-        "podcast",
-    }:
+    if (
+        not status
+        and not mimetype
+        and (row.get("kind") or "")
+        in {
+            "article",
+            "podcast",
+        }
+    ):
         source = row.get("source") or ""
         if "sitemap" in source or "feed" in source:
             return True

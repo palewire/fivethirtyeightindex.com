@@ -174,9 +174,7 @@ def walk(
                 ]
             )
 
-    log.info(
-        "wrote %d urls to %s and %s", len(entries_by_url), sitemap_out, enrich_out
-    )
+    log.info("wrote %d urls to %s and %s", len(entries_by_url), sitemap_out, enrich_out)
     return (len(mementos), len(entries_by_url))
 
 
@@ -234,7 +232,9 @@ def _filter_mementos(
 ) -> Iterator[FeedMemento]:
     """Apply year-range filter + optional per-day sampling."""
     last_day: str | None = None
-    sample_window = sample_every_days if sample_every_days and sample_every_days > 0 else None
+    sample_window = (
+        sample_every_days if sample_every_days and sample_every_days > 0 else None
+    )
     for memento in mementos:
         year = int(memento.timestamp[:4])
         if start_year is not None and year < start_year:
@@ -244,7 +244,10 @@ def _filter_mementos(
         if sample_window is not None:
             day_bucket = memento.timestamp[:8]  # YYYYMMDD
             # Skip when same N-day bucket as last yielded.
-            if last_day is not None and _days_between(last_day, day_bucket) < sample_window:
+            if (
+                last_day is not None
+                and _days_between(last_day, day_bucket) < sample_window
+            ):
                 continue
             last_day = day_bucket
         yield memento
@@ -362,7 +365,9 @@ def _localname(tag: str) -> str:
     return tag
 
 
-_FEEDBURNER_QS = re.compile(r"\?utm_[^#]*|\?(?:source|medium|campaign)=[^#]*", re.IGNORECASE)
+_FEEDBURNER_QS = re.compile(
+    r"\?utm_[^#]*|\?(?:source|medium|campaign)=[^#]*", re.IGNORECASE
+)
 
 
 def _strip_feedburner(url: str) -> str:

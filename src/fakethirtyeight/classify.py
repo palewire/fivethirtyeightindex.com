@@ -133,18 +133,20 @@ def classify(url: str, host: str | None = None) -> Classification:
     # all of which embed the same `ESP<digits>` episode ID. Rolling up by
     # that ID merges duplicates across the redirect chain and across
     # multiple captures of the same episode.
-    if bare_host in {
-        "feeds.megaphone.fm",
-        "traffic.megaphone.fm",
-        "podtrac.com",
-        "www.podtrac.com",
-        "pscrb.fm",
-    } or "megaphone.fm" in bare_host:
+    if (
+        bare_host
+        in {
+            "feeds.megaphone.fm",
+            "traffic.megaphone.fm",
+            "podtrac.com",
+            "www.podtrac.com",
+            "pscrb.fm",
+        }
+        or "megaphone.fm" in bare_host
+    ):
         m = _MEGAPHONE_EP_ID.search(url)
         if m:
-            return Classification(
-                KIND_PODCAST, f"podcast:meg/{m.group(1).upper()}"
-            )
+            return Classification(KIND_PODCAST, f"podcast:meg/{m.group(1).upper()}")
 
     # ---- fivethirtyeight.blogs.nytimes.com (NYT era, 2010-2014) ---------
     # Permalinks were /YYYY/MM/DD/<slug>/. Roll up by slug into the same

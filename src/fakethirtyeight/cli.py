@@ -113,7 +113,11 @@ def sitemaps(workers: int, delay: float, host: str) -> None:
 
 @cli.command()
 @click.option("--feed-url", required=True, help="Archived feed URL to walk.")
-@click.option("--host", default=None, help="Host label for output files (defaults to feed URL hostname).")
+@click.option(
+    "--host",
+    default=None,
+    help="Host label for output files (defaults to feed URL hostname).",
+)
 @click.option("--workers", type=int, default=4, show_default=True)
 @click.option("--delay", type=float, default=0.5, show_default=True)
 @click.option(
@@ -143,7 +147,9 @@ def feeds(
         start_year=start_year,
         end_year=end_year,
     )
-    click.echo(f"fetched {fetched:,} feed mementos, discovered {found:,} unique post URLs")
+    click.echo(
+        f"fetched {fetched:,} feed mementos, discovered {found:,} unique post URLs"
+    )
 
 
 @cli.command("save-to-wayback")

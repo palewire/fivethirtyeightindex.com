@@ -73,9 +73,7 @@ def _submit(client: httpx.Client, url: str) -> dict[str, str]:
         timeout=60.0,
     )
     if resp.status_code in {429, 500, 502, 503, 504}:
-        raise httpx.HTTPStatusError(
-            "retryable", request=resp.request, response=resp
-        )
+        raise httpx.HTTPStatusError("retryable", request=resp.request, response=resp)
     resp.raise_for_status()
     return resp.json()
 

@@ -257,7 +257,9 @@ def rescrape_dates(
                     failed_urls.append(target.url)
                 return (0, 1)
             new_date = result.metadata.published_at
-            if not new_date or len(new_date) <= len(rows[idx].get("published_at") or ""):
+            if not new_date or len(new_date) <= len(
+                rows[idx].get("published_at") or ""
+            ):
                 return (0, 0)
             with write_lock:
                 rows[idx]["published_at"] = new_date
@@ -348,7 +350,11 @@ def retry_failed(
             new_row = _result_to_row(result)
             recovered_now = bool(
                 not result.error
-                and (result.metadata.title or result.metadata.byline or result.metadata.published_at)
+                and (
+                    result.metadata.title
+                    or result.metadata.byline
+                    or result.metadata.published_at
+                )
             )
             with write_lock:
                 # Replace the row outright — error/http_status/metadata all
@@ -473,9 +479,7 @@ def _tally(outcomes: list[tuple[int, int]]) -> tuple[int, int]:
     return recovered, errored
 
 
-def _write_back(
-    path: Path, fieldnames: list[str], rows: list[dict[str, str]]
-) -> None:
+def _write_back(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
     """Overwrite ``enriched.csv`` with the in-memory row list."""
     with path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=fieldnames)

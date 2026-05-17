@@ -62,9 +62,7 @@ _BYLINE_ROLE_PREFIX = re.compile(
 #: Keep only the parenthesized display name. Pre-dates the extractor's
 #: cleanup but slipped into a thousand-plus enriched rows during the
 #: Blogspot-era enrich, so the build-time cleanup catches them too.
-_BLOGGER_EMAIL_AUTHOR = re.compile(
-    r"^\s*\S+@\S+\s*\(([^)]+)\)\s*$"
-)
+_BLOGGER_EMAIL_AUTHOR = re.compile(r"^\s*\S+@\S+\s*\(([^)]+)\)\s*$")
 
 #: Canonical-form aliases for misspelled or CMS-handle bylines found in
 #: the source data. Comparison is case-insensitive on the key. The mapped
