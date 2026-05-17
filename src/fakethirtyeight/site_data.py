@@ -58,6 +58,14 @@ _BYLINE_ROLE_PREFIX = re.compile(
     re.IGNORECASE,
 )
 
+#: Blogspot's Atom-feed author wrapper: ``someone@example.com (Real Name)``.
+#: Keep only the parenthesized display name. Pre-dates the extractor's
+#: cleanup but slipped into a thousand-plus enriched rows during the
+#: Blogspot-era enrich, so the build-time cleanup catches them too.
+_BLOGGER_EMAIL_AUTHOR = re.compile(
+    r"^\s*\S+@\S+\s*\(([^)]+)\)\s*$"
+)
+
 #: Canonical-form aliases for misspelled or CMS-handle bylines found in
 #: the source data. Comparison is case-insensitive on the key. The mapped
 #: value is used verbatim as the display name, so entries with the typo
@@ -348,7 +356,11 @@ def _split_authors(byline: str) -> list[str]:
     """
     if not byline.strip():
         return []
-    cleaned = _BYLINE_ROLE_PREFIX.sub("", byline.strip(), count=1)
+    s = byline.strip()
+    m = _BLOGGER_EMAIL_AUTHOR.match(s)
+    if m:
+        s = m.group(1).strip()
+    cleaned = _BYLINE_ROLE_PREFIX.sub("", s, count=1)
     parts = _BYLINE_SPLIT.split(cleaned)
     out: list[str] = []
     seen: set[str] = set()

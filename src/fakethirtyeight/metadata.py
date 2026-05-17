@@ -403,5 +403,14 @@ def _str(value: object) -> str:
     return ""
 
 
+_BLOGGER_EMAIL_AUTHOR = re.compile(r"^\s*\S+@\S+\s*\(([^)]+)\)\s*$")
+
+
 def _clean_text(s: str) -> str:
-    return " ".join(s.split()).strip()
+    s = " ".join(s.split()).strip()
+    # Blogspot's Atom feed renders bylines as `email@host (Real Name)`;
+    # strip the email wrapper so downstream dedup matches plain names.
+    m = _BLOGGER_EMAIL_AUTHOR.match(s)
+    if m:
+        return m.group(1).strip()
+    return s

@@ -84,6 +84,9 @@ def test_year_from_url(url: str, expected: int | None):
         ("   ", []),
         # Dedup case-insensitively
         ("Nate Silver and nate silver", ["Nate Silver"]),
+        # Blogspot Atom feed format: `email@host (Real Name)` → name only.
+        ("noreply@blogger.com (Nate Silver)", ["Nate Silver"]),
+        ("someone@example.com (Harry Enten)", ["Harry Enten"]),
     ],
 )
 def test_split_authors(byline: str, expected: list[str]) -> None:
