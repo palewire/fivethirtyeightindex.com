@@ -472,11 +472,14 @@ def _build_record(
     wayback_url = _build_wayback_url(earliest_ts, url) if earliest_ts else ""
     # Sitemap/feed-source rows don't carry a CDX timestamp through merge,
     # so the curated row's first_seen_ts is empty. Fall back to the
-    # snapshot the enricher (or feed walker) recorded, so podcast/NYT
-    # entries link into Wayback instead of their live origin host. Build
-    # the URL via the same helper so we end up with the player-wrapper
-    # form (no `id_/`) rather than the raw-content form stored on disk.
-    if not wayback_url and enrich_row:
+    # snapshot the enricher (or feed walker) recorded — for HTML pages
+    # (NYT etc.) Wayback reliably has a snapshot, so wrapping is the
+    # right move. Podcast audio is a special case: Wayback rarely caches
+    # mp3 bodies, so the wrapped URL would just resolve to a "no snapshot"
+    # page even though we minted a fake timestamp from the feed memento.
+    # The Megaphone CDN is still serving the audio live, so we keep the
+    # bare host URL for podcasts and let users click straight to play.
+    if not wayback_url and enrich_row and kind != "podcast":
         wayback_url = _build_wayback_url(
             enrich_row.get("snapshot_timestamp") or "",
             enrich_row.get("url") or url,
@@ -508,8 +511,10 @@ def _build_record(
     # Sitemap-only rows we never enriched fall through with no Wayback
     # wrapper at all. Use the no-timestamp Wayback form — the server 302s
     # to the closest snapshot — so every URL on the site routes through
-    # archive.org rather than a (likely dead) live origin.
-    if not wayback_url and url:
+    # archive.org rather than a (likely dead) live origin. Skip for
+    # podcasts: Wayback rarely caches mp3 bodies, and the Megaphone CDN
+    # is still serving the audio live.
+    if not wayback_url and url and kind != "podcast":
         wayback_url = f"https://web.archive.org/web/{url}"
     final_url = wayback_url or url
     if not final_url:
