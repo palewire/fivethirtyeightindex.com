@@ -71,6 +71,11 @@ _WP_DATE_ARCHIVE = re.compile(
 _HAS_PAGE_N = re.compile(r"/page/\d+/?$|/page/\d+/")
 # /features/<slug>/comment-page-N/
 _COMMENT_PAGE = re.compile(r"/comment-page-\d+/?$")
+# NYT-era permalinks under fivethirtyeight.blogs.nytimes.com:
+# /YYYY/MM/DD/some-slug/
+_NYT_PERMALINK = re.compile(
+    r"^/(?P<year>20\d{2})/(?P<month>\d{2})/(?P<day>\d{2})/(?P<slug>[^/]+?)/?$"
+)
 
 _NUMERIC = re.compile(r"^\d+$")
 
@@ -117,6 +122,23 @@ def classify(url: str, host: str | None = None) -> Classification:
 
     # Strip ``www.`` so the main-host rules apply uniformly.
     bare_host = h[4:] if h.startswith("www.") else h
+
+    # ---- fivethirtyeight.blogs.nytimes.com (NYT era, 2010-2014) ---------
+    # Permalinks were /YYYY/MM/DD/<slug>/. Roll up by slug into the same
+    # `article:<slug>` namespace as the post-NYT eras so a post that was
+    # republished after the move dedupes naturally.
+    if bare_host == "fivethirtyeight.blogs.nytimes.com":
+        if not segs:
+            return Classification(KIND_HOMEPAGE, "nyt:/")
+        m = _NYT_PERMALINK.match(path)
+        if m:
+            return Classification(KIND_ARTICLE, f"article:{m.group('slug')}")
+        # /tag/<x>/, /author/<x>/, /page/N/ etc. — section noise.
+        if segs[0] in {"tag", "author", "category"}:
+            return Classification(KIND_TAG, f"tag:nyt/{path}")
+        if segs[0] == "page" or _HAS_PAGE_N.search(path):
+            return Classification(KIND_PAGINATED, f"paginated:nyt{path}")
+        return Classification(KIND_OTHER, f"nyt-other:{path}")
 
     # ---- projects.fivethirtyeight.com -----------------------------------
     if bare_host == "projects.fivethirtyeight.com":

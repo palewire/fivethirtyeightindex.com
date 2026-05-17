@@ -130,6 +130,17 @@ CASES: list[tuple[str, str, str]] = [
         KIND_LIVEBLOG,
         "liveblog:2016-election-results-coverage",
     ),
+    # NYT-era post (2010-2014) — slug-only rollup namespace.
+    (
+        "http://fivethirtyeight.blogs.nytimes.com/2012/05/30/economically-obama-is-no-jimmy-carter/",
+        KIND_ARTICLE,
+        "article:economically-obama-is-no-jimmy-carter",
+    ),
+    (
+        "http://fivethirtyeight.blogs.nytimes.com/2013/11/01/some-slug",
+        KIND_ARTICLE,
+        "article:some-slug",
+    ),
     # Section landings
     ("https://fivethirtyeight.com/politics/", KIND_SECTION, "section:politics"),
     (

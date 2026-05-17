@@ -12,6 +12,7 @@ from fakethirtyeight import crawl as crawl_mod
 from fakethirtyeight import curate as curate_mod
 from fakethirtyeight import duplicates as duplicates_mod
 from fakethirtyeight import enrich as enrich_mod
+from fakethirtyeight import feeds as feeds_mod
 from fakethirtyeight import export as export_mod
 from fakethirtyeight import merge as merge_mod
 from fakethirtyeight import site_data as site_data_mod
@@ -107,6 +108,41 @@ def sitemaps(workers: int, delay: float, host: str) -> None:
     """Pull captured sitemap.xml files from Wayback, parse URLs."""
     count = sitemaps_mod.enrich(workers=workers, delay=delay, host=host)
     click.echo(f"discovered {count} URLs from sitemaps")
+
+
+@cli.command()
+@click.option("--feed-url", required=True, help="Archived feed URL to walk.")
+@click.option("--host", default=None, help="Host label for output files (defaults to feed URL hostname).")
+@click.option("--workers", type=int, default=4, show_default=True)
+@click.option("--delay", type=float, default=0.5, show_default=True)
+@click.option(
+    "--sample-every-days",
+    type=int,
+    default=None,
+    help="Keep one memento per N-day bucket to reduce redundant fetches.",
+)
+@click.option("--start-year", type=int, default=None)
+@click.option("--end-year", type=int, default=None)
+def feeds(
+    feed_url: str,
+    host: str | None,
+    workers: int,
+    delay: float,
+    sample_every_days: int | None,
+    start_year: int | None,
+    end_year: int | None,
+) -> None:
+    """Walk Wayback snapshots of an Atom/RSS feed to recover post URLs + metadata."""
+    fetched, found = feeds_mod.walk(
+        feed_url,
+        host=host,
+        workers=workers,
+        delay=delay,
+        sample_every_days=sample_every_days,
+        start_year=start_year,
+        end_year=end_year,
+    )
+    click.echo(f"fetched {fetched:,} feed mementos, discovered {found:,} unique post URLs")
 
 
 @cli.command()

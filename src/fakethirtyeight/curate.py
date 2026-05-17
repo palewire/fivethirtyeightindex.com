@@ -115,12 +115,21 @@ def _is_qualifying(row: dict[str, str]) -> bool:
     """True for rows that should contribute to the curated subset.
 
     HTML 200s only — we don't want a soft-404 page or a 30x stub showing up
-    as the canonical for an article.
+    as the canonical for an article. Sitemap-only URLs (no CDX entry, so no
+    status/mimetype to check) are trusted for *article* kinds only — the
+    feed walker's output identifies canonical post URLs. We don't extend the
+    same trust to project kinds because the projects sitemap enumerates
+    thousands of drilldown subpages that shouldn't surface as standalone
+    entries.
     """
     status = row.get("latest_status") or ""
     mimetype = row.get("latest_mimetype") or ""
     if status == "200" and mimetype == "text/html":
         return True
+    if not status and not mimetype and (row.get("kind") or "") == "article":
+        source = row.get("source") or ""
+        if "sitemap" in source or "feed" in source:
+            return True
     return False
 
 
