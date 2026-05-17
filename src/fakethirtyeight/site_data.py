@@ -270,7 +270,7 @@ _DEDUPE_KINDS: frozenset[str] = frozenset({"article", "video"})
 
 
 def _dedupe_articles(records: list[SiteRecord]) -> list[SiteRecord]:
-    """Collapse rows that share title+byline+date.
+    """Collapse rows that share title+date.
 
     Same-article slug variants: WordPress draft revisions, truncated slugs
     from the early CMS, and editor typo-fixes that left both URLs live.
@@ -278,34 +278,58 @@ def _dedupe_articles(records: list[SiteRecord]) -> list[SiteRecord]:
     both /features/<slug> (article) and /videos/<slug> (video); the
     article carries the writeup + embedded player, so it wins. Kinds not
     in :data:`_DEDUPE_KINDS` are passed through unchanged.
+
+    The key intentionally drops byline so a bylineless row collapses
+    with its bylined sibling (the enricher occasionally missed the
+    author span on one snapshot but not on another for the same post).
+    When two rows in a title+date bucket have *different* non-empty
+    bylines, they stay separate — different reporters covering the
+    same headline on the same day is plausible enough to preserve.
     """
-    groups: dict[tuple[str, str, str], list[SiteRecord]] = {}
+    groups: dict[tuple[str, str], list[SiteRecord]] = {}
     out: list[SiteRecord] = []
     for r in records:
         if r.kind not in _DEDUPE_KINDS or not r.title or not r.date:
             out.append(r)
             continue
-        key = (r.title.strip().lower(), r.byline.strip().lower(), r.date[:10])
+        key = (r.title.strip().lower(), r.date[:10])
         groups.setdefault(key, []).append(r)
     for group in groups.values():
-        out.append(max(group, key=_canonical_score))
+        if len(group) == 1:
+            out.append(group[0])
+            continue
+        # If every non-empty byline in the bucket agrees (or only one row
+        # carries a byline at all), it's the same article — collapse.
+        non_empty = {r.byline.strip().lower() for r in group if r.byline.strip()}
+        if len(non_empty) <= 1:
+            out.append(max(group, key=_canonical_score))
+            continue
+        # Multiple distinct authors share title+date — keep one best row
+        # per byline so we don't conflate unrelated posts.
+        by_b: dict[str, list[SiteRecord]] = {}
+        for r in group:
+            by_b.setdefault(r.byline.strip().lower(), []).append(r)
+        for sub in by_b.values():
+            out.append(max(sub, key=_canonical_score))
     return out
 
 
-def _canonical_score(record: SiteRecord) -> tuple[int, int, int, str]:
+def _canonical_score(record: SiteRecord) -> tuple[int, int, int, int, str]:
     """Sort key for picking the canonical row out of a dedup group.
 
     Higher tuples win. Priority order:
     1. Article kind beats video (richer text content, /features/ URL).
-    2. Avoid the `_N` WordPress revision suffix.
-    3. Prefer the longer slug (a truncated variant of the same article
+    2. A non-empty byline beats an empty one (more complete metadata).
+    3. Avoid the `_N` WordPress revision suffix.
+    4. Prefer the longer slug (a truncated variant of the same article
        loses to its full sibling).
-    4. Alphabetical id as a stable tie-break.
+    5. Alphabetical id as a stable tie-break.
     """
     slug = record.id.split(":", 1)[1] if ":" in record.id else record.id
     is_article = 1 if record.kind == "article" else 0
+    has_byline = 1 if record.byline.strip() else 0
     not_revision = 0 if _REVISION_SLUG_SUFFIX.search(slug) else 1
-    return (is_article, not_revision, len(slug), slug)
+    return (is_article, has_byline, not_revision, len(slug), slug)
 
 
 def _build_record(
