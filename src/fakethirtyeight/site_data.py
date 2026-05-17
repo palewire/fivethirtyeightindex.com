@@ -294,6 +294,17 @@ def _build_record(
         curated_row.get("first_seen_ts") or curated_row.get("last_seen_ts") or ""
     )
     wayback_url = _build_wayback_url(earliest_ts, url) if earliest_ts else ""
+    # Sitemap/feed-source rows don't carry a CDX timestamp through merge,
+    # so the curated row's first_seen_ts is empty. Fall back to the
+    # snapshot the enricher (or feed walker) recorded, so podcast/NYT
+    # entries link into Wayback instead of their live origin host. Build
+    # the URL via the same helper so we end up with the player-wrapper
+    # form (no `id_/`) rather than the raw-content form stored on disk.
+    if not wayback_url and enrich_row:
+        wayback_url = _build_wayback_url(
+            enrich_row.get("snapshot_timestamp") or "",
+            enrich_row.get("url") or url,
+        )
 
     if enrich_row:
         # Re-clean titles to apply any extractor improvements that landed
