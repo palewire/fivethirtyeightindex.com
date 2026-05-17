@@ -76,6 +76,12 @@ _BYLINE_ALIASES: dict[str, str] = {
     "elena mejía": "Elena Mejia",
     "amelia thomson-deveaux": "Amelia Thomson-DeVeaux",
     "meena.ganesan": "Meena Ganesan",
+    # The 2008 Blogspot post-author span ran only the first name on a
+    # handful of posts; NYT-era atom feeds also occasionally upper-cased
+    # the byline. Normalize both to the canonical display form so the
+    # byline-page dedup and title+byline+date collapse work.
+    "nate": "Nate Silver",
+    "nate silver": "Nate Silver",
 }
 
 #: Names that aren't actual people — staff/network/format attributions.

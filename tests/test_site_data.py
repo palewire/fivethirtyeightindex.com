@@ -56,6 +56,9 @@ def test_year_from_url(url: str, expected: int | None):
         ("FiveThirtyEight Staff", []),
         ("FiveThirtyEight Podcasts", []),
         ("FiveThirtyEight Video", []),
+        # Truncated / shouted variants of Nate Silver get aliased to canonical.
+        ("Nate", ["Nate Silver"]),
+        ("NATE SILVER", ["Nate Silver"]),
         ("Staff", []),
         ("A FiveThirtyEight Chat", []),
         ("A FiveThirtyEight Podcast", []),
