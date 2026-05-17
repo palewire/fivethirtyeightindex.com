@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 KIND_ARTICLE = "article"
 KIND_LIVEBLOG = "liveblog"
@@ -161,9 +161,13 @@ def classify(url: str, host: str | None = None) -> Classification:
         # canonical path is `/live-blog/` (hyphenated) but the early site
         # used `/liveblog/` and `/liveblogs/` as well. All variants roll up
         # to the same `liveblog:<slug>` key so dupes across URL forms merge.
+        # Slugs are URL-decoded and whitespace-collapsed so a literal-space
+        # slug (e.g. `2016-%20election-results-%20coverage`) merges with
+        # its clean sibling.
         if first in {"live-blog", "liveblog", "liveblogs"}:
             if len(segs) >= 2:
-                return Classification(KIND_LIVEBLOG, f"liveblog:{segs[1]}")
+                slug = re.sub(r"[-\s]+", "-", unquote(segs[1])).strip("-")
+                return Classification(KIND_LIVEBLOG, f"liveblog:{slug}")
             return Classification(KIND_LIVEBLOG, "liveblog:")
 
         # Features + DataLab era articles share slugs; roll up together.
@@ -202,12 +206,13 @@ def classify(url: str, host: str | None = None) -> Classification:
                 return Classification(KIND_SECTION, "section:podcasts")
             return Classification(KIND_OTHER, f"other:{path}")
 
-        # Methodology
+        # Methodology — roll up by first segment after /methodology/. Anything
+        # deeper (e.g. `/API`, `/:amp:story`, URL-encoded text fragments) is
+        # Wayback drilldown noise rather than a distinct doc.
         if first == "methodology":
-            return Classification(
-                KIND_METHODOLOGY,
-                f"methodology:{path.rstrip('/')}",
-            )
+            if len(segs) >= 2:
+                return Classification(KIND_METHODOLOGY, f"methodology:{segs[1]}")
+            return Classification(KIND_METHODOLOGY, "methodology:")
 
         # Section landings/sub-landings.
         # Only depth=1 (e.g. /politics/) or shallow non-page sub-landings
