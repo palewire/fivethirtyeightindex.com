@@ -34,10 +34,26 @@ def make_ssl_context() -> ssl.SSLContext:
     return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
 
+def _ia_auth_header() -> dict[str, str]:
+    """Internet Archive S3-style auth header, when keys are present.
+
+    Generate keys at https://archive.org/account/s3.php and export them as
+    ``IA_ACCESS_KEY`` and ``IA_SECRET_KEY``. Required for CDX prefix/domain
+    queries against high-traffic news domains (e.g. ``*.nytimes.com``) that
+    the public endpoint rejects with 403.
+    """
+    access = os.environ.get("IA_ACCESS_KEY")
+    secret = os.environ.get("IA_SECRET_KEY")
+    if access and secret:
+        return {"Authorization": f"LOW {access}:{secret}"}
+    return {}
+
+
 def make_client() -> httpx.Client:
+    headers = {**DEFAULT_HEADERS, **_ia_auth_header()}
     return httpx.Client(
         timeout=DEFAULT_TIMEOUT,
-        headers=DEFAULT_HEADERS,
+        headers=headers,
         follow_redirects=True,
         verify=make_ssl_context(),
     )

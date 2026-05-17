@@ -20,6 +20,22 @@ make install
 
 (Uses [uv](https://docs.astral.sh/uv/). Equivalent: `uv sync --all-extras`.)
 
+### Authenticating to the CDX API (optional)
+
+The public Wayback CDX endpoint rejects prefix/domain queries against
+high-traffic news domains (e.g. `*.nytimes.com`) with `403 Forbidden`. To
+crawl those hosts — needed for the FiveThirtyEight NYT-era content at
+`fivethirtyeight.blogs.nytimes.com` — generate an Internet Archive S3 key
+pair at <https://archive.org/account/s3.php> and export them:
+
+```bash
+export IA_ACCESS_KEY=...
+export IA_SECRET_KEY=...
+```
+
+When both are set, all Wayback requests use the S3-style auth header
+automatically.
+
 ## Usage
 
 ```bash
