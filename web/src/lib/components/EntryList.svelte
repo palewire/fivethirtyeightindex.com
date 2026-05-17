@@ -6,9 +6,17 @@
 	interface Props {
 		entries: Entry[];
 		showByline?: boolean;
+		sortable?: boolean;
 	}
 
-	let { entries, showByline = true }: Props = $props();
+	type SortKey = 'date' | 'title' | 'byline';
+	type SortDirection = 'asc' | 'desc';
+
+	let { entries, showByline = true, sortable = false }: Props = $props();
+	let sortKey = $state<SortKey | null>(null);
+	let sortDirection = $state<SortDirection>('asc');
+
+	const textCollator = new Intl.Collator(undefined, { sensitivity: 'base' });
 
 	/** YYYY-MM-DD from full ISO timestamps; shorter dates (Blogspot-era
 	 *  YYYY-MM) pass through unmodified. */
@@ -17,18 +25,136 @@
 		if (iso.length >= 10) return iso.slice(0, 10);
 		return iso;
 	}
+
+	function displayByline(entry: Entry): string {
+		if (entry.authors.length > 0) return entry.authors.join(', ');
+		return entry.byline;
+	}
+
+	function sortValue(entry: Entry, key: SortKey): string {
+		if (key === 'date') return entry.date ?? '';
+		if (key === 'title') return entry.title;
+		return displayByline(entry);
+	}
+
+	function toggleSort(key: SortKey): void {
+		if (sortKey === key) {
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+			return;
+		}
+
+		sortKey = key;
+		sortDirection = key === 'date' ? 'desc' : 'asc';
+	}
+
+	function sortLabel(label: string, key: SortKey): string {
+		if (sortKey !== key) return `Sort by ${label}, currently unsorted`;
+		return `Sort by ${label}, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}`;
+	}
+
+	let sortedEntries = $derived.by(() => {
+		if (!sortable || !sortKey) return entries;
+
+		const activeSort = sortKey;
+		const decorated = entries.map((entry) => ({
+			entry,
+			value: sortValue(entry, activeSort)
+		}));
+		decorated.sort((left, right) => {
+			const order =
+				activeSort === 'date'
+					? left.value.localeCompare(right.value)
+					: textCollator.compare(left.value, right.value);
+			return sortDirection === 'asc' ? order : -order;
+		});
+		return decorated.map(({ entry }) => entry);
+	});
 </script>
 
 <table class="entries">
-	<thead class="visually-hidden">
+	<thead class:visually-hidden={!sortable}>
 		<tr>
-			<th scope="col">Date</th>
-			<th scope="col">Headline</th>
-			{#if showByline}<th scope="col">Byline</th>{/if}
+			<th
+				scope="col"
+				class="c-date"
+				aria-sort={sortKey === 'date'
+					? sortDirection === 'asc'
+						? 'ascending'
+						: 'descending'
+					: 'none'}
+			>
+				{#if sortable}
+					<button
+						type="button"
+						class="sort-button"
+						aria-label={sortLabel('date', 'date')}
+						onclick={() => toggleSort('date')}
+					>
+						Date
+						<span class="sort-indicator" aria-hidden="true">
+							{sortKey === 'date' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
+						</span>
+					</button>
+				{:else}
+					Date
+				{/if}
+			</th>
+			<th
+				scope="col"
+				class="c-title"
+				aria-sort={sortKey === 'title'
+					? sortDirection === 'asc'
+						? 'ascending'
+						: 'descending'
+					: 'none'}
+			>
+				{#if sortable}
+					<button
+						type="button"
+						class="sort-button"
+						aria-label={sortLabel('headline', 'title')}
+						onclick={() => toggleSort('title')}
+					>
+						Headline
+						<span class="sort-indicator" aria-hidden="true">
+							{sortKey === 'title' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
+						</span>
+					</button>
+				{:else}
+					Headline
+				{/if}
+			</th>
+			{#if showByline}
+				<th
+					scope="col"
+					class="c-byline"
+					aria-sort={sortKey === 'byline'
+						? sortDirection === 'asc'
+							? 'ascending'
+							: 'descending'
+						: 'none'}
+				>
+					{#if sortable}
+						<button
+							type="button"
+							class="sort-button"
+							aria-label={sortLabel('byline', 'byline')}
+							onclick={() => toggleSort('byline')}
+						>
+							Byline
+							<span class="sort-indicator" aria-hidden="true">
+								{sortKey === 'byline' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
+							</span>
+						</button>
+					{:else}
+						Byline
+					{/if}
+				</th>
+			{/if}
 		</tr>
 	</thead>
 	<tbody>
-		{#each entries as entry (entry.id)}
+		{#each sortedEntries as entry (entry.id)}
 			<tr>
 				<td class="c-date">
 					<time datetime={entry.date}>{fmtDate(entry.date)}</time>
@@ -37,12 +163,15 @@
 					<a href={entry.url} rel="noopener external" target="_blank">{entry.title}</a>
 				</td>
 				{#if showByline}<td class="c-byline">
-					{#each entry.authors as name, i (name)}
-						<a href="{base}/byline/{slugify(name)}/">{name}</a>{i < entry.authors.length - 1
-							? ', '
-							: ''}
-					{/each}
-					{#if entry.authors.length === 0 && entry.byline}{entry.byline}{/if}
+					{#if entry.authors.length > 0}
+						{#each entry.authors as name, i (name)}
+							<a href="{base}/byline/{slugify(name)}/">{name}</a>{i < entry.authors.length - 1
+								? ', '
+								: ''}
+						{/each}
+					{:else}
+						{displayByline(entry)}
+					{/if}
 				</td>{/if}
 			</tr>
 		{/each}

@@ -121,14 +121,47 @@ a:active {
 	line-height: var(--line-height-tight);
 }
 
+.entries th,
 .entries td {
 	padding: 0.55em 0.6em 0.55em 0;
 	vertical-align: middle;
 	border-bottom: var(--rule-thin);
 }
 
+.entries th:last-child,
 .entries td:last-child {
 	padding-right: 0;
+}
+
+.entries th {
+	font-weight: var(--font-weight-regular);
+	text-align: left;
+	color: var(--color-muted);
+}
+
+.entries .sort-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3em;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+
+.entries .sort-button:hover {
+	color: var(--color-fg);
+}
+
+.entries .sort-button:focus-visible {
+	outline: 2px solid var(--color-fg);
+	outline-offset: 2px;
+}
+
+.entries .sort-indicator {
+	font-size: 0.8em;
 }
 
 .entries .c-date {
