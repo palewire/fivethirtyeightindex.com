@@ -338,6 +338,12 @@ def _build_record(
     byline = _join_authors(authors)
     year = _year_from_date(date) or _year_from_url(url)
 
+    # Sitemap-only rows we never enriched fall through with no Wayback
+    # wrapper at all. Use the no-timestamp Wayback form — the server 302s
+    # to the closest snapshot — so every URL on the site routes through
+    # archive.org rather than a (likely dead) live origin.
+    if not wayback_url and url:
+        wayback_url = f"https://web.archive.org/web/{url}"
     final_url = wayback_url or url
     if not final_url:
         return None
