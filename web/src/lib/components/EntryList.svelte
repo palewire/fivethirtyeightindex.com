@@ -16,10 +16,7 @@
 	let sortKey = $state<SortKey | null>(null);
 	let sortDirection = $state<SortDirection>('asc');
 
-	const collator = new Intl.Collator(undefined, {
-		numeric: true,
-		sensitivity: 'base'
-	});
+	const textCollator = new Intl.Collator(undefined, { sensitivity: 'base' });
 
 	/** YYYY-MM-DD from full ISO timestamps; shorter dates (Blogspot-era
 	 *  YYYY-MM) pass through unmodified. */
@@ -54,15 +51,18 @@
 		if (!sortable || !sortKey) return entries;
 
 		const activeSort = sortKey;
-		const sorted = [...entries];
-		sorted.sort((left, right) => {
-			const order = collator.compare(
-				sortValue(left, activeSort),
-				sortValue(right, activeSort)
-			);
+		const decorated = entries.map((entry) => ({
+			entry,
+			value: sortValue(entry, activeSort)
+		}));
+		decorated.sort((left, right) => {
+			const order =
+				activeSort === 'date'
+					? left.value.localeCompare(right.value)
+					: textCollator.compare(left.value, right.value);
 			return sortDirection === 'asc' ? order : -order;
 		});
-		return sorted;
+		return decorated.map(({ entry }) => entry);
 	});
 </script>
 
