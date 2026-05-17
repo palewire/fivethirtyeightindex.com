@@ -50,6 +50,8 @@ def test_year_from_url(url: str, expected: int | None):
         ("FiveThirtyEight", []),
         ("FiveThirtyEight.com", []),
         ("ABC News / FiveThirtyEight", []),
+        # ESPN co-credited network attribution; no individual reporter.
+        ("ESPN and FiveThirtyEight", []),
         ("Staff", []),
         ("A FiveThirtyEight Chat", []),
         ("A FiveThirtyEight Podcast", []),
