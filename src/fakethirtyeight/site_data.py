@@ -114,6 +114,15 @@ _NON_PERSON_BYLINES: frozenset[str] = frozenset(
 _NON_PERSON_BYLINE_PREFIXES: tuple[str, ...] = (
     "published ",
     "updated ",
+    # Production credits that aren't reporter bylines: "Art by yesyesno",
+    # "Photos by Gabriella Demczuk", etc.
+    "art by ",
+    "design by ",
+    "illustration by ",
+    "illustrations by ",
+    "photos by ",
+    "photography by ",
+    "video by ",
 )
 
 

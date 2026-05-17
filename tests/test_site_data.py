@@ -94,11 +94,13 @@ def test_year_from_url(url: str, expected: int | None):
         ("-- Nate Silver", ["Nate Silver"]),
         ("-- Sean Quinn", ["Sean Quinn"]),
         ("— Nate Silver", ["Nate Silver"]),
-        # Pipe-separated multi-credit
+        # Pipe-separated multi-credit. The artist credit ("Art by ...") is a
+        # production attribution, not a reporter byline — drop it.
         (
             "Trevor Martin | Art by yesyesno",
-            ["Trevor Martin", "Art by yesyesno"],
+            ["Trevor Martin"],
         ),
+        ("Sam Smith and Photos by Gabriella Demczuk", ["Sam Smith"]),
         # Empty / whitespace
         ("", []),
         ("   ", []),
