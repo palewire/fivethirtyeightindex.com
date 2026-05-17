@@ -96,12 +96,24 @@ _NON_PERSON_BYLINES: frozenset[str] = frozenset(
         "abc news",
         "abc news live",
         "espn",
+        "gma",
+        "good morning america",
+        "the new york times",
         "staff",
         "a fivethirtyeight chat",
         "a fivethirtyeight podcast",
         "a fivethirtyeightchat",
         "rotha052",  # CMS account handle that surfaced as a byline
     }
+)
+
+
+#: Strings that the extractor occasionally picks up where a byline would
+#: normally be — date stamps, "Updated:" markers, etc. Drop on prefix match
+#: so date variants beyond the literal seen ones don't surface.
+_NON_PERSON_BYLINE_PREFIXES: tuple[str, ...] = (
+    "published ",
+    "updated ",
 )
 
 
@@ -397,6 +409,14 @@ def _split_authors(byline: str) -> list[str]:
             continue
         if name.isdigit():  # e.g. extractor picked up a year "2017" as the author
             continue
+        lower = name.lower()
+        if any(lower.startswith(p) for p in _NON_PERSON_BYLINE_PREFIXES):
+            continue
+        # NYT-era atom feeds rendered bylines in all caps (KEVIN QUEALY,
+        # MICAH COHEN, etc.). Title-case any all-uppercase multi-word name
+        # so the byline-page slug and the dedup key match the normal form.
+        if " " in name and name == name.upper():
+            name = name.title()
         # Normalize typos / CMS handles to the canonical display form.
         name = _BYLINE_ALIASES.get(name.casefold(), name)
         key = name.casefold()

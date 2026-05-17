@@ -59,6 +59,17 @@ def test_year_from_url(url: str, expected: int | None):
         # Truncated / shouted variants of Nate Silver get aliased to canonical.
         ("Nate", ["Nate Silver"]),
         ("NATE SILVER", ["Nate Silver"]),
+        # NYT-era all-caps bylines get title-cased.
+        ("KEVIN QUEALY", ["Kevin Quealy"]),
+        ("MICAH COHEN", ["Micah Cohen"]),
+        ("JOHN SIDES", ["John Sides"]),
+        # GMA / NYT / etc. network attributions drop.
+        ("GMA", []),
+        ("Good Morning America", []),
+        ("THE NEW YORK TIMES", []),
+        # Date-stamp strings the extractor occasionally grabbed.
+        ("Published Feb. 16", []),
+        ("Updated 3:14 PM", []),
         ("Staff", []),
         ("A FiveThirtyEight Chat", []),
         ("A FiveThirtyEight Podcast", []),
