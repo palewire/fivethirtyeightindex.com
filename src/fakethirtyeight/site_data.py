@@ -194,6 +194,7 @@ def build(
             records.append(record)
 
     records = _dedupe_articles(records)
+    _disambiguate_project_drilldown_titles(records)
 
     # Sort: oldest first. This is a retrospective archive — chronological
     # reading order makes more sense than newest-first.
@@ -386,6 +387,53 @@ def _dedup_title_key(title: str) -> str:
     on the record is left untouched.
     """
     return title.strip().translate(_TITLE_QUOTE_NORMALIZE).lower()
+
+
+def _disambiguate_project_drilldown_titles(records: list[SiteRecord]) -> None:
+    """Append a slug-derived suffix to project drilldown titles that collide.
+
+    Some project dashboards (e.g. congress-trump-score, carmelo) shipped
+    hundreds of per-entity drilldown URLs that all carry the same
+    page-level ``<title>``: "Tracking Congress In The Age Of Trump" for
+    every congressmember, "FiveThirtyEight's CARMELO NBA Projections"
+    for every NBA player. The polls drilldowns already disambiguate
+    themselves via the snapshot HTML title, so we only append a suffix
+    when sibling rows actually share a title.
+
+    Mutates ``records`` in place.
+    """
+    from collections import Counter
+
+    title_counts: Counter[str] = Counter(
+        r.title for r in records if r.kind == "project" and r.title
+    )
+    for r in records:
+        if r.kind != "project" or not r.title:
+            continue
+        if title_counts[r.title] < 2:
+            continue
+        suffix = _drilldown_suffix(r.id)
+        if suffix and suffix.lower() not in r.title.lower():
+            r.title = f"{r.title} — {suffix}"
+
+
+def _drilldown_suffix(rollup_key: str) -> str:
+    """Prettify the sub-path of a project rollup key.
+
+    ``project:congress-trump-score/a-donald-mceachin`` → ``A Donald Mceachin``
+    ``project:carmelo/lebron-james``                  → ``Lebron James``
+    ``project:2018-midterm-election-forecast/house/al/1`` → ``House Al 1``
+    """
+    if ":" not in rollup_key:
+        return ""
+    slug = rollup_key.split(":", 1)[1]
+    if "/" not in slug:
+        return ""
+    # Drop the project root; everything after is the drilldown identity.
+    sub = slug.split("/", 1)[1]
+    parts = [p.replace("-", " ").strip() for p in sub.split("/") if p]
+    pretty = " ".join(p.title() for p in parts if p)
+    return pretty
 
 
 def _canonical_score(record: SiteRecord) -> tuple[int, int, int, int, str]:

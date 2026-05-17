@@ -13,6 +13,25 @@ from fakethirtyeight.site_data import (
 
 
 @pytest.mark.parametrize(
+    ("rollup_key", "expected"),
+    [
+        # Single-segment slug — no drilldown.
+        ("project:congress-trump-score", ""),
+        # Per-member drilldown — title-case the sub-slug.
+        ("project:congress-trump-score/a-donald-mceachin", "A Donald Mceachin"),
+        ("project:carmelo/lebron-james", "Lebron James"),
+        # Multi-segment drilldown — joined with spaces.
+        ("project:2018-midterm-election-forecast/house/al/1", "House Al 1"),
+        # No namespace prefix → no suffix.
+        ("just-a-slug", ""),
+    ],
+)
+def test_drilldown_suffix(rollup_key: str, expected: str):
+    from fakethirtyeight.site_data import _drilldown_suffix
+    assert _drilldown_suffix(rollup_key) == expected
+
+
+@pytest.mark.parametrize(
     ("url", "expected"),
     [
         # Cycle-year project slugs are the main motivation for the fallback.
