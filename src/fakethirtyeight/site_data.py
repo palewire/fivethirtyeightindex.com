@@ -668,10 +668,15 @@ def iter_byline_slugs(records: Iterable[SiteRecord]) -> dict[str, list[str]]:
 def _write_sitemap(records: list[SiteRecord], out_path: Path = SITEMAP_FILE) -> None:
     """Emit a flat sitemap.xml listing every prerendered route."""
     years: set[int] = set()
+    year_months: set[str] = set()  # "YYYY-MM" buckets with at least one entry
     bylines: set[str] = set()
     for r in records:
         if r.year is not None:
             years.add(r.year)
+        if r.date and len(r.date) >= 7 and r.date[4] == "-":
+            ym = r.date[:7]
+            if ym[:4].isdigit() and ym[5:].isdigit():
+                year_months.add(ym)
         for name in r.authors:
             slug = slugify(name)
             if slug:
@@ -679,6 +684,9 @@ def _write_sitemap(records: list[SiteRecord], out_path: Path = SITEMAP_FILE) -> 
 
     urls: list[str] = [f"{SITE_BASE_URL}/", f"{SITE_BASE_URL}/byline/"]
     urls.extend(f"{SITE_BASE_URL}/year/{y}/" for y in sorted(years))
+    urls.extend(
+        f"{SITE_BASE_URL}/year/{ym[:4]}/{ym[5:]}/" for ym in sorted(year_months)
+    )
     urls.extend(f"{SITE_BASE_URL}/byline/{slug}/" for slug in sorted(bylines))
 
     out_path.parent.mkdir(parents=True, exist_ok=True)

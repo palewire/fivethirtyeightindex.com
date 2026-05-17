@@ -12,7 +12,8 @@ export const load: PageLoad = async ({ params, fetch }) => {
 	if (entries.length === 0) {
 		error(404, `no entries for ${yearNum}`);
 	}
-	return { year: yearNum, entries };
+	const months = cache.monthsByYear.get(yearNum) ?? [];
+	return { year: yearNum, entries, months };
 };
 
 export const entries: EntryGenerator = async () => {
