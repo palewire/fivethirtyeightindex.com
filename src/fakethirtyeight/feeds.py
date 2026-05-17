@@ -188,12 +188,31 @@ def _entry_score(entry: FeedEntry) -> int:
     )
 
 
+@retry(
+    retry=retry_if_exception_type(httpx.HTTPError),
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=2, min=2, max=60),
+    reraise=True,
+)
+def _fetch_timemap(client: httpx.Client, timemap_url: str) -> str:
+    """Fetch a Wayback timemap with tenacity-backed retries.
+
+    Wayback's edge intermittently drops TLS connections mid-handshake
+    when it's under load; tenacity around the get() call rides through
+    transient `SSL: UNEXPECTED_EOF_WHILE_READING` and 5xx blips.
+    """
+    resp = client.get(timemap_url, timeout=60.0)
+    if resp.status_code in {429, 500, 502, 503, 504}:
+        raise httpx.HTTPStatusError("retryable", request=resp.request, response=resp)
+    resp.raise_for_status()
+    return resp.text
+
+
 def _list_mementos(client: httpx.Client, feed_url: str) -> Iterator[FeedMemento]:
     """Yield every memento Wayback knows about for ``feed_url``."""
     timemap = TIMEMAP_URL.format(url=feed_url)
-    resp = client.get(timemap, timeout=60.0)
-    resp.raise_for_status()
-    for line in resp.text.splitlines():
+    body = _fetch_timemap(client, timemap)
+    for line in body.splitlines():
         m = _MEMENTO_TS_RE.search(line)
         if not m:
             continue
