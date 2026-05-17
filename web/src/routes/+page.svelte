@@ -49,7 +49,7 @@
 		<p class="no-results">No matches.</p>
 	{:else}
 		<h2 class="section-heading">Results ({results.length})</h2>
-		<EntryList entries={results as Entry[]} />
+		<EntryList entries={results as Entry[]} sortable={true} />
 	{/if}
 {:else}
 	<div class="opening-teaser">
