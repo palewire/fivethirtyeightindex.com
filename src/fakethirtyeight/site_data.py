@@ -82,6 +82,11 @@ _BYLINE_ALIASES: dict[str, str] = {
     # byline-page dedup and title+byline+date collapse work.
     "nate": "Nate Silver",
     "nate silver": "Nate Silver",
+    # Some Blogspot-era posts carried "Hale Bonddad Stewart" with a quoted
+    # nickname; the modern republish dropped the quotes. Normalize both to
+    # the canonical surname-only form so the dedup matches across eras.
+    'hale "bonddad" stewart': "Hale Stewart",
+    "hale bonddad stewart": "Hale Stewart",
 }
 
 #: Names that aren't actual people — staff/network/format attributions.
@@ -292,7 +297,7 @@ def _dedupe_articles(records: list[SiteRecord]) -> list[SiteRecord]:
         if r.kind not in _DEDUPE_KINDS or not r.title or not r.date:
             out.append(r)
             continue
-        key = (r.title.strip().lower(), r.date[:10])
+        key = (_dedup_title_key(r.title), r.date[:10])
         groups.setdefault(key, []).append(r)
     for group in groups.values():
         if len(group) == 1:
@@ -304,14 +309,63 @@ def _dedupe_articles(records: list[SiteRecord]) -> list[SiteRecord]:
         if len(non_empty) <= 1:
             out.append(max(group, key=_canonical_score))
             continue
-        # Multiple distinct authors share title+date — keep one best row
-        # per byline so we don't conflate unrelated posts.
+        # WP-era + modern-features pair with conflicting bylines: the
+        # modern republish frequently inherits a backfilled byline that
+        # doesn't match the original publish date (e.g. Neil Paine
+        # attributed to a 2009 post, even though he joined in 2014).
+        # Trust the WP-era byline — it came from the contemporaneous
+        # HTML — and keep the higher-canonical-score row otherwise.
+        wp_rows = [r for r in group if r.id.startswith("article:wp/")]
+        non_wp_rows = [r for r in group if not r.id.startswith("article:wp/")]
+        if wp_rows and non_wp_rows:
+            wp_survivor = max(wp_rows, key=_canonical_score)
+            survivor = max(group, key=_canonical_score)
+            out.append(
+                SiteRecord(
+                    id=survivor.id,
+                    title=survivor.title,
+                    byline=wp_survivor.byline,
+                    authors=list(wp_survivor.authors),
+                    year=survivor.year,
+                    date=survivor.date,
+                    kind=survivor.kind,
+                    url=survivor.url,
+                )
+            )
+            continue
+        # Multiple distinct authors share title+date and no WP-era hint —
+        # keep one best row per byline so we don't conflate unrelated posts.
         by_b: dict[str, list[SiteRecord]] = {}
         for r in group:
             by_b.setdefault(r.byline.strip().lower(), []).append(r)
         for sub in by_b.values():
             out.append(max(sub, key=_canonical_score))
     return out
+
+
+#: Smart-quote / curly-punctuation characters that snuck into titles via
+#: different CMS templates. Normalize when computing the dedup key so a
+#: curly-apostrophe title matches its straight-quote sibling.
+_TITLE_QUOTE_NORMALIZE = str.maketrans(
+    {
+        "‘": "'",  # ‘
+        "’": "'",  # ’
+        "“": '"',  # “
+        "”": '"',  # ”
+        "–": "-",  # – en dash
+        "—": "-",  # — em dash
+    }
+)
+
+
+def _dedup_title_key(title: str) -> str:
+    """Normalize a title for dedup-key purposes.
+
+    Lowercase, strip, and fold smart quotes / dashes down to ASCII so
+    typographic variants of the same string collide. The display title
+    on the record is left untouched.
+    """
+    return title.strip().translate(_TITLE_QUOTE_NORMALIZE).lower()
 
 
 def _canonical_score(record: SiteRecord) -> tuple[int, int, int, int, str]:
