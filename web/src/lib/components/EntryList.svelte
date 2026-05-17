@@ -47,6 +47,11 @@
 		sortDirection = key === 'date' ? 'desc' : 'asc';
 	}
 
+	function sortLabel(label: string, key: SortKey): string {
+		if (sortKey !== key) return `Sort by ${label}, currently unsorted`;
+		return `Sort by ${label}, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}`;
+	}
+
 	let sortedEntries = $derived.by(() => {
 		if (!sortable || !sortKey) return entries;
 
@@ -79,7 +84,12 @@
 					: 'none'}
 			>
 				{#if sortable}
-					<button type="button" class="sort-button" onclick={() => toggleSort('date')}>
+					<button
+						type="button"
+						class="sort-button"
+						aria-label={sortLabel('date', 'date')}
+						onclick={() => toggleSort('date')}
+					>
 						Date
 						<span class="sort-indicator" aria-hidden="true">
 							{sortKey === 'date' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
@@ -99,7 +109,12 @@
 					: 'none'}
 			>
 				{#if sortable}
-					<button type="button" class="sort-button" onclick={() => toggleSort('title')}>
+					<button
+						type="button"
+						class="sort-button"
+						aria-label={sortLabel('headline', 'title')}
+						onclick={() => toggleSort('title')}
+					>
 						Headline
 						<span class="sort-indicator" aria-hidden="true">
 							{sortKey === 'title' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
@@ -120,7 +135,12 @@
 						: 'none'}
 				>
 					{#if sortable}
-						<button type="button" class="sort-button" onclick={() => toggleSort('byline')}>
+						<button
+							type="button"
+							class="sort-button"
+							aria-label={sortLabel('byline', 'byline')}
+							onclick={() => toggleSort('byline')}
+						>
 							Byline
 							<span class="sort-indicator" aria-hidden="true">
 								{sortKey === 'byline' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
