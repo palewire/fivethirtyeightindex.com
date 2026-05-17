@@ -268,6 +268,15 @@ def _extract_published_at(
         if isinstance(dt, str) and dt:
             return _norm_date(dt)
 
+    # Blogspot era (2008-2010): every permalink page shows one h2.date-header
+    # at the top of the post group. Format is either `M.D.YYYY` or
+    # `Weekday, Month D, YYYY`. Use the first header on the page — Blogspot
+    # permalink pages do sometimes render adjacent days, but the linked post
+    # is always under the first header.
+    blogspot = _blogspot_date(soup)
+    if blogspot:
+        return blogspot
+
     # URL-path fallback (Blogspot era)
     if fallback_url:
         path = urlsplit(fallback_url).path or ""
@@ -275,6 +284,43 @@ def _extract_published_at(
         if m:
             return f"{m.group('year')}-{m.group('month')}"
 
+    return ""
+
+
+_BLOGSPOT_NUMERIC_DATE = re.compile(r"\b(\d{1,2})\.(\d{1,2})\.(20\d{2})\b")
+_BLOGSPOT_TEXT_DATE = re.compile(
+    r"\b(?:January|February|March|April|May|June|July|August|"
+    r"September|October|November|December)\s+\d{1,2},\s+20\d{2}\b",
+    re.IGNORECASE,
+)
+_MONTH_NUMBERS: dict[str, int] = {
+    "january": 1, "february": 2, "march": 3, "april": 4,
+    "may": 5, "june": 6, "july": 7, "august": 8,
+    "september": 9, "october": 10, "november": 11, "december": 12,
+}
+
+
+def _blogspot_date(soup: BeautifulSoup) -> str:
+    """Parse the first ``h2.date-header`` Blogspot uses on 2008-2010 posts."""
+    tag = soup.find("h2", class_="date-header")
+    if not isinstance(tag, Bs4Tag):
+        return ""
+    text = tag.get_text(" ", strip=True)
+    if not text:
+        return ""
+    m = _BLOGSPOT_NUMERIC_DATE.search(text)
+    if m:
+        month, day, year = m.groups()
+        return f"{year}-{int(month):02d}-{int(day):02d}"
+    m = _BLOGSPOT_TEXT_DATE.search(text)
+    if m:
+        match_text = m.group(0)
+        word_month, day_str, year_str = re.match(
+            r"(\w+)\s+(\d{1,2}),\s+(20\d{2})", match_text
+        ).groups()  # type: ignore[union-attr]
+        month_num = _MONTH_NUMBERS.get(word_month.lower())
+        if month_num:
+            return f"{year_str}-{month_num:02d}-{int(day_str):02d}"
     return ""
 
 

@@ -187,6 +187,106 @@ def rescrape_bylines(
     return (len(targets), recovered)
 
 
+def rescrape_dates(
+    *,
+    enriched_path: Path = ENRICHED_FILE,
+    workers: int = 4,
+    delay: float = 1.0,
+    limit: int | None = None,
+) -> tuple[int, int]:
+    """Re-fetch rows whose ``published_at`` is only YYYY-MM precision.
+
+    The URL-path fallback gives us year+month for Blogspot-era articles when
+    no date metadata was found. The updated extractor now parses the
+    ``h2.date-header`` Blogspot stamped on every post, recovering full
+    YYYY-MM-DD. Only overwrites when the new extraction yields a longer
+    (more precise) date. Returns (refetched_count, recovered_count).
+    """
+    if not enriched_path.exists():
+        msg = f"enriched file not found: {enriched_path}. Run `enrich` first."
+        raise FileNotFoundError(msg)
+
+    ensure_dirs()
+
+    rows: list[dict[str, str]] = []
+    fieldnames: list[str] = []
+    targets: list[tuple[int, EnrichTarget]] = []
+    with enriched_path.open(newline="", encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        fieldnames = list(reader.fieldnames or ENRICHED_FIELDS)
+        for row in reader:
+            rows.append(row)
+            d = row.get("published_at") or ""
+            # YYYY-MM is exactly 7 chars; anything richer (YYYY-MM-DD or
+            # full ISO) is already at the precision we want.
+            if len(d) != 7 or d[4] != "-":
+                continue
+            url = row.get("url") or ""
+            ts = row.get("snapshot_timestamp") or ""
+            if not url or not ts:
+                continue
+            targets.append(
+                (
+                    len(rows) - 1,
+                    EnrichTarget(
+                        rollup_key=row.get("rollup_key") or "",
+                        kind=row.get("kind") or "",
+                        url=url,
+                        timestamp=ts,
+                    ),
+                )
+            )
+            if limit and len(targets) >= limit:
+                break
+
+    if not targets:
+        log.info("no YYYY-MM rows to rescrape")
+        return (0, 0)
+
+    log.info(
+        "rescraping %d partial-date rows using %d workers, delay=%.1fs",
+        len(targets),
+        workers,
+        delay,
+    )
+
+    write_lock = threading.Lock()
+
+    with make_client() as client:
+
+        def _process(target_pair: tuple[int, EnrichTarget]) -> int:
+            idx, target = target_pair
+            result = _fetch_and_extract(client, target, delay=delay)
+            if result.error:
+                return 0
+            new_date = result.metadata.published_at
+            if not new_date or len(new_date) <= len(rows[idx].get("published_at") or ""):
+                return 0
+            with write_lock:
+                rows[idx]["published_at"] = new_date
+            return 1
+
+        outcomes = thread_map(
+            _process,
+            targets,
+            max_workers=workers,
+            desc="rescrape-dates",
+            unit="url",
+        )
+        recovered = sum(outcomes)
+
+    with enriched_path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+
+    log.info(
+        "upgraded %d/%d partial dates to full precision", recovered, len(targets)
+    )
+    return (len(targets), recovered)
+
+
 def retry_failed(
     *,
     enriched_path: Path = ENRICHED_FILE,

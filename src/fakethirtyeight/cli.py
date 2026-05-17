@@ -169,6 +169,23 @@ def rescrape_bylines(workers: int, delay: float, limit: int | None) -> None:
     click.echo(f"rescraped {total:,} rows, recovered {recovered:,} byline(s)")
 
 
+@cli.command("rescrape-dates")
+@click.option("--workers", type=int, default=4, show_default=True)
+@click.option("--delay", type=float, default=1.0, show_default=True)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap rows to re-fetch (smoke testing).",
+)
+def rescrape_dates(workers: int, delay: float, limit: int | None) -> None:
+    """Upgrade YYYY-MM rows to full YYYY-MM-DD via the Blogspot date-header."""
+    total, recovered = enrich_mod.rescrape_dates(
+        workers=workers, delay=delay, limit=limit
+    )
+    click.echo(f"rescraped {total:,} rows, recovered {recovered:,} full date(s)")
+
+
 @cli.command("retry-failed")
 @click.option("--workers", type=int, default=4, show_default=True)
 @click.option("--delay", type=float, default=1.0, show_default=True)
