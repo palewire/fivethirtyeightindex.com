@@ -199,10 +199,13 @@ def enrich(workers: int, delay: float, limit: int | None) -> None:
 )
 def rescrape_bylines(workers: int, delay: float, limit: int | None) -> None:
     """Re-fetch rows with empty byline and try the updated extractor."""
-    total, recovered = enrich_mod.rescrape_bylines(
+    total, recovered, errored = enrich_mod.rescrape_bylines(
         workers=workers, delay=delay, limit=limit
     )
-    click.echo(f"rescraped {total:,} rows, recovered {recovered:,} byline(s)")
+    click.echo(
+        f"rescraped {total:,} rows, recovered {recovered:,} byline(s), "
+        f"{errored:,} transient failure(s)"
+    )
 
 
 @cli.command("rescrape-dates")
@@ -216,10 +219,13 @@ def rescrape_bylines(workers: int, delay: float, limit: int | None) -> None:
 )
 def rescrape_dates(workers: int, delay: float, limit: int | None) -> None:
     """Upgrade YYYY-MM rows to full YYYY-MM-DD via the Blogspot date-header."""
-    total, recovered = enrich_mod.rescrape_dates(
+    total, recovered, errored = enrich_mod.rescrape_dates(
         workers=workers, delay=delay, limit=limit
     )
-    click.echo(f"rescraped {total:,} rows, recovered {recovered:,} full date(s)")
+    click.echo(
+        f"rescraped {total:,} rows, recovered {recovered:,} full date(s), "
+        f"{errored:,} transient failure(s)"
+    )
 
 
 @cli.command("retry-failed")
@@ -233,10 +239,13 @@ def rescrape_dates(workers: int, delay: float, limit: int | None) -> None:
 )
 def retry_failed(workers: int, delay: float, limit: int | None) -> None:
     """Re-fetch rows that errored or came back with no metadata at all."""
-    total, recovered = enrich_mod.retry_failed(
+    total, recovered, errored = enrich_mod.retry_failed(
         workers=workers, delay=delay, limit=limit
     )
-    click.echo(f"retried {total:,} rows, recovered {recovered:,}")
+    click.echo(
+        f"retried {total:,} rows, recovered {recovered:,}, "
+        f"{errored:,} transient failure(s)"
+    )
 
 
 @cli.command()

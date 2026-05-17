@@ -90,11 +90,14 @@ def rescrape_bylines(
     delay: float = 1.0,
     limit: int | None = None,
     kinds: frozenset[str] = _BYLINE_RESCRAPE_KINDS,
-) -> tuple[int, int]:
+) -> tuple[int, int, int]:
     """Re-fetch rows whose byline is empty and re-extract metadata.
 
     Only updates the byline column when the new extractor produces a
-    non-empty value. Returns (refetched_count, recovered_count).
+    non-empty value. Returns
+    ``(refetched_count, recovered_count, transient_failures)`` — the
+    third number counts rows whose retry hit a network/HTTP error that
+    survived tenacity's backoff. A later run usually succeeds.
 
     Targets the kinds in ``kinds`` (default: article, video, methodology)
     where a missing byline likely means the extractor missed an existing
@@ -136,7 +139,7 @@ def rescrape_bylines(
 
     if not targets:
         log.info("no candidates to rescrape")
-        return (0, 0)
+        return (0, 0, 0)
 
     log.info(
         "rescraping %d rows with empty byline using %d workers, delay=%.1fs",
@@ -145,21 +148,25 @@ def rescrape_bylines(
         delay,
     )
 
-    recovered = 0
     write_lock = threading.Lock()
+    failed_urls: list[str] = []
 
     with make_client() as client:
 
-        def _process(target_pair: tuple[int, EnrichTarget]) -> int:
+        def _process(target_pair: tuple[int, EnrichTarget]) -> tuple[int, int]:
             idx, target = target_pair
             result = _fetch_and_extract(client, target, delay=delay)
-            if result.error or not result.metadata.byline:
-                return 0
+            if result.error:
+                with write_lock:
+                    failed_urls.append(target.url)
+                return (0, 1)
+            if not result.metadata.byline:
+                return (0, 0)
             with write_lock:
                 rows[idx]["byline"] = result.metadata.byline
                 # Don't overwrite title/date — those were correct before;
                 # only fill in the byline gap.
-            return 1
+            return (1, 0)
 
         outcomes = thread_map(
             _process,
@@ -168,17 +175,11 @@ def rescrape_bylines(
             desc="rescrape-bylines",
             unit="url",
         )
-        recovered = sum(outcomes)
 
-    # Write everything back.
-    with enriched_path.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fieldnames)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow(row)
-
-    log.info("recovered %d bylines out of %d rescraped", recovered, len(targets))
-    return (len(targets), recovered)
+    recovered, errored = _tally(outcomes)
+    _write_back(enriched_path, fieldnames, rows)
+    _log_failures("rescrape-bylines", recovered, len(targets), failed_urls)
+    return (len(targets), recovered, errored)
 
 
 def rescrape_dates(
@@ -187,14 +188,17 @@ def rescrape_dates(
     workers: int = 4,
     delay: float = 1.0,
     limit: int | None = None,
-) -> tuple[int, int]:
+) -> tuple[int, int, int]:
     """Re-fetch rows whose ``published_at`` is only YYYY-MM precision.
 
     The URL-path fallback gives us year+month for Blogspot-era articles when
     no date metadata was found. The updated extractor now parses the
     ``h2.date-header`` Blogspot stamped on every post, recovering full
     YYYY-MM-DD. Only overwrites when the new extraction yields a longer
-    (more precise) date. Returns (refetched_count, recovered_count).
+    (more precise) date. Returns
+    ``(refetched_count, recovered_count, transient_failures)`` — the
+    third number counts rows whose retry hit a network/HTTP error that
+    survived tenacity's backoff. A later run usually succeeds.
     """
     if not enriched_path.exists():
         msg = f"enriched file not found: {enriched_path}. Run `enrich` first."
@@ -231,7 +235,7 @@ def rescrape_dates(
 
     if not targets:
         log.info("no YYYY-MM rows to rescrape")
-        return (0, 0)
+        return (0, 0, 0)
 
     log.info(
         "rescraping %d partial-date rows using %d workers, delay=%.1fs",
@@ -241,20 +245,23 @@ def rescrape_dates(
     )
 
     write_lock = threading.Lock()
+    failed_urls: list[str] = []
 
     with make_client() as client:
 
-        def _process(target_pair: tuple[int, EnrichTarget]) -> int:
+        def _process(target_pair: tuple[int, EnrichTarget]) -> tuple[int, int]:
             idx, target = target_pair
             result = _fetch_and_extract(client, target, delay=delay)
             if result.error:
-                return 0
+                with write_lock:
+                    failed_urls.append(target.url)
+                return (0, 1)
             new_date = result.metadata.published_at
             if not new_date or len(new_date) <= len(rows[idx].get("published_at") or ""):
-                return 0
+                return (0, 0)
             with write_lock:
                 rows[idx]["published_at"] = new_date
-            return 1
+            return (1, 0)
 
         outcomes = thread_map(
             _process,
@@ -263,18 +270,11 @@ def rescrape_dates(
             desc="rescrape-dates",
             unit="url",
         )
-        recovered = sum(outcomes)
 
-    with enriched_path.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fieldnames)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow(row)
-
-    log.info(
-        "upgraded %d/%d partial dates to full precision", recovered, len(targets)
-    )
-    return (len(targets), recovered)
+    recovered, errored = _tally(outcomes)
+    _write_back(enriched_path, fieldnames, rows)
+    _log_failures("rescrape-dates", recovered, len(targets), failed_urls)
+    return (len(targets), recovered, errored)
 
 
 def retry_failed(
@@ -283,7 +283,7 @@ def retry_failed(
     workers: int = 4,
     delay: float = 1.0,
     limit: int | None = None,
-) -> tuple[int, int]:
+) -> tuple[int, int, int]:
     """Re-fetch rows that errored or came back without any metadata.
 
     Targets rows where ``error`` is non-empty (HTTP/network failures) or
@@ -291,7 +291,10 @@ def retry_failed(
     page but couldn't parse a title/byline/date). Overwrites the row's
     fields with the new result when the retry succeeds; leaves rows
     unchanged when the retry still fails. Returns
-    (refetched_count, recovered_count).
+    ``(refetched_count, recovered_count, transient_failures)`` — the
+    third number counts rows whose retry hit a network/HTTP error that
+    survived tenacity's backoff (and where the row's ``error`` column
+    was just overwritten with the latest attempt's failure repr).
     """
     if not enriched_path.exists():
         msg = f"enriched file not found: {enriched_path}. Run `enrich` first."
@@ -325,7 +328,7 @@ def retry_failed(
 
     if not targets:
         log.info("no failed rows to retry")
-        return (0, 0)
+        return (0, 0, 0)
 
     log.info(
         "retrying %d failed rows using %d workers, delay=%.1fs",
@@ -335,10 +338,11 @@ def retry_failed(
     )
 
     write_lock = threading.Lock()
+    failed_urls: list[str] = []
 
     with make_client() as client:
 
-        def _process(target_pair: tuple[int, EnrichTarget]) -> int:
+        def _process(target_pair: tuple[int, EnrichTarget]) -> tuple[int, int]:
             idx, target = target_pair
             result = _fetch_and_extract(client, target, delay=delay)
             new_row = _result_to_row(result)
@@ -351,7 +355,9 @@ def retry_failed(
                 # reflect the latest attempt. Preserve original
                 # snapshot_timestamp + url since those came from curated.
                 rows[idx].update(new_row)
-            return 1 if recovered_now else 0
+                if result.error:
+                    failed_urls.append(target.url)
+            return (1 if recovered_now else 0, 1 if result.error else 0)
 
         outcomes = thread_map(
             _process,
@@ -360,16 +366,11 @@ def retry_failed(
             desc="retry-failed",
             unit="url",
         )
-        recovered = sum(outcomes)
 
-    with enriched_path.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fieldnames)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow(row)
-
-    log.info("recovered %d rows out of %d retried", recovered, len(targets))
-    return (len(targets), recovered)
+    recovered, errored = _tally(outcomes)
+    _write_back(enriched_path, fieldnames, rows)
+    _log_failures("retry-failed", recovered, len(targets), failed_urls)
+    return (len(targets), recovered, errored)
 
 
 def enrich(
@@ -463,6 +464,46 @@ def _iter_targets(
 
 def _load_done(out_path: Path) -> set[str]:
     return set(load_enriched(out_path).keys())
+
+
+def _tally(outcomes: list[tuple[int, int]]) -> tuple[int, int]:
+    """Sum the (recovered, errored) per-row tuples emitted by a rescrape."""
+    recovered = sum(o[0] for o in outcomes)
+    errored = sum(o[1] for o in outcomes)
+    return recovered, errored
+
+
+def _write_back(
+    path: Path, fieldnames: list[str], rows: list[dict[str, str]]
+) -> None:
+    """Overwrite ``enriched.csv`` with the in-memory row list."""
+    with path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+
+
+def _log_failures(
+    label: str, recovered: int, target_count: int, failed_urls: list[str]
+) -> None:
+    """Summarize a rescrape pass at INFO + log a sample of transient fails.
+
+    The transient-failure case (TLS EOF, repeated 5xx through tenacity's
+    backoff) is the one that's easy to miss otherwise — they leave the
+    on-disk row unchanged. Surfacing the URLs lets a follow-up run know
+    where to look.
+    """
+    log.info("%s: recovered %d/%d", label, recovered, target_count)
+    if failed_urls:
+        sample = failed_urls[:5]
+        log.warning(
+            "%s: %d transient fetch failures; re-run to retry. First %d: %s",
+            label,
+            len(failed_urls),
+            len(sample),
+            sample,
+        )
 
 
 def _load_all_rows(path: Path) -> tuple[list[dict[str, str]], list[str]]:
