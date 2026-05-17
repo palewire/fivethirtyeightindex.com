@@ -109,26 +109,28 @@
 					Headline
 				{/if}
 			</th>
-			{#if showByline}<th
-				scope="col"
-				class="c-byline"
-				aria-sort={sortKey === 'byline'
-					? sortDirection === 'asc'
-						? 'ascending'
-						: 'descending'
-					: 'none'}
-			>
-				{#if sortable}
-					<button type="button" class="sort-button" onclick={() => toggleSort('byline')}>
+			{#if showByline}
+				<th
+					scope="col"
+					class="c-byline"
+					aria-sort={sortKey === 'byline'
+						? sortDirection === 'asc'
+							? 'ascending'
+							: 'descending'
+						: 'none'}
+				>
+					{#if sortable}
+						<button type="button" class="sort-button" onclick={() => toggleSort('byline')}>
+							Byline
+							<span class="sort-indicator" aria-hidden="true">
+								{sortKey === 'byline' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
+							</span>
+						</button>
+					{:else}
 						Byline
-						<span class="sort-indicator" aria-hidden="true">
-							{sortKey === 'byline' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
-						</span>
-					</button>
-				{:else}
-					Byline
-				{/if}
-			</th>{/if}
+					{/if}
+				</th>
+			{/if}
 		</tr>
 	</thead>
 	<tbody>
