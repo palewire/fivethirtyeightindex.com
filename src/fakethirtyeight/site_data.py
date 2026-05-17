@@ -244,17 +244,37 @@ def build(
 #: theme placeholder title.
 _JUNK_LIVEBLOG_TITLES: frozenset[str] = frozenset({"headline"})
 
+#: Slug suffixes (after the last `/`) that mark a project URL as an
+#: embed/promo shim rather than an editorial dashboard. These pages are
+#: thin HTML fragments rendered as network embeds elsewhere; they have
+#: no standalone reader value and surface with junk titles like
+#: "Abc Embed" / "Promo".
+_JUNK_PROJECT_SLUG_SUFFIXES: tuple[str, ...] = (
+    "abc-embed.html",
+    "abc-promo.html",
+    "promo.html",
+    "abc-embed",
+    "abc-promo",
+)
+
 
 def _is_junk_record(record: SiteRecord) -> bool:
     """Drop sandbox/draft content the CMS exposed by accident.
 
     The "Headline" placeholder is WordPress's default liveblog title — any
     liveblog that still has it never received a real title and is almost
-    certainly a test post the CMS admin saved as live.
+    certainly a test post the CMS admin saved as live. Project-embed
+    shim URLs (abc-embed.html, promo.html) are similar — fragments
+    rendered as network embeds elsewhere, not standalone editorial pages.
     """
     if record.kind == "liveblog":
         title = (record.title or "").strip().lower()
         if title in _JUNK_LIVEBLOG_TITLES:
+            return True
+    if record.kind == "project":
+        slug = record.id.split(":", 1)[1] if ":" in record.id else record.id
+        last_segment = slug.rsplit("/", 1)[-1].lower()
+        if last_segment in _JUNK_PROJECT_SLUG_SUFFIXES:
             return True
     return False
 
