@@ -15,6 +15,7 @@ from fakethirtyeight import enrich as enrich_mod
 from fakethirtyeight import feeds as feeds_mod
 from fakethirtyeight import export as export_mod
 from fakethirtyeight import merge as merge_mod
+from fakethirtyeight import save as save_mod
 from fakethirtyeight import site_data as site_data_mod
 from fakethirtyeight import sitemaps as sitemaps_mod
 from fakethirtyeight import stats as stats_mod
@@ -143,6 +144,25 @@ def feeds(
         end_year=end_year,
     )
     click.echo(f"fetched {fetched:,} feed mementos, discovered {found:,} unique post URLs")
+
+
+@cli.command("save-to-wayback")
+@click.option(
+    "--feed-csv",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="Path to a data/feed-*.csv whose 'url' column gets submitted.",
+)
+@click.option("--delay", type=float, default=5.0, show_default=True)
+@click.option("--limit", type=int, default=None, help="Cap submissions (smoke test).")
+def save_to_wayback(feed_csv: Path, delay: float, limit: int | None) -> None:
+    """Submit each URL in a feed CSV to Wayback Save Page Now."""
+    urls = list(save_mod.urls_from_feed_csv(feed_csv))
+    if limit:
+        urls = urls[:limit]
+    click.echo(f"submitting {len(urls):,} URLs (delay={delay}s)")
+    submitted, errored = save_mod.submit_urls(urls, delay=delay)
+    click.echo(f"queued {submitted:,} for capture, {errored:,} failed")
 
 
 @cli.command()
