@@ -12,8 +12,8 @@ from fakethirtyeight import crawl as crawl_mod
 from fakethirtyeight import curate as curate_mod
 from fakethirtyeight import duplicates as duplicates_mod
 from fakethirtyeight import enrich as enrich_mod
-from fakethirtyeight import feeds as feeds_mod
 from fakethirtyeight import export as export_mod
+from fakethirtyeight import feeds as feeds_mod
 from fakethirtyeight import merge as merge_mod
 from fakethirtyeight import save as save_mod
 from fakethirtyeight import site_data as site_data_mod

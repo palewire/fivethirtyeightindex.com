@@ -367,12 +367,12 @@ def _dedupe_articles(records: list[SiteRecord]) -> list[SiteRecord]:
 #: curly-apostrophe title matches its straight-quote sibling.
 _TITLE_QUOTE_NORMALIZE = str.maketrans(
     {
-        "‘": "'",  # ‘
-        "’": "'",  # ’
-        "“": '"',  # “
-        "”": '"',  # ”
-        "–": "-",  # – en dash
-        "—": "-",  # — em dash
+        "‘": "'",  # left single quote
+        "’": "'",  # right single quote
+        "“": '"',  # left double quote
+        "”": '"',  # right double quote
+        "–": "-",  # en dash
+        "—": "-",  # em dash
     }
 )
 
@@ -430,8 +430,7 @@ def _drilldown_suffix(rollup_key: str) -> str:
     # Drop the project root; everything after is the drilldown identity.
     sub = slug.split("/", 1)[1]
     parts = [p.replace("-", " ").strip() for p in sub.split("/") if p]
-    pretty = " ".join(p.title() for p in parts if p)
-    return pretty
+    return " ".join(p.title() for p in parts if p)
 
 
 def _canonical_score(record: SiteRecord) -> tuple[int, int, int, int, str]:

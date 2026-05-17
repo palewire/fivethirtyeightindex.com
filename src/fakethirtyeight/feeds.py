@@ -23,7 +23,6 @@ import time
 import xml.etree.ElementTree as ET
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
@@ -372,8 +371,7 @@ _FEEDBURNER_QS = re.compile(
 
 def _strip_feedburner(url: str) -> str:
     """Remove feedburner / UTM tracking gunk that the NYT feeds appended."""
-    url = re.sub(r"\?utm_[^#]+", "", url)
-    return url
+    return re.sub(r"\?utm_[^#]+", "", url)
 
 
 def _normalize_pub(raw: str) -> str:
