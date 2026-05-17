@@ -187,6 +187,108 @@ def rescrape_bylines(
     return (len(targets), recovered)
 
 
+def retry_failed(
+    *,
+    enriched_path: Path = ENRICHED_FILE,
+    workers: int = 4,
+    delay: float = 1.0,
+    limit: int | None = None,
+) -> tuple[int, int]:
+    """Re-fetch rows that errored or came back without any metadata.
+
+    Targets rows where ``error`` is non-empty (HTTP/network failures) or
+    where every metadata field is blank despite a 200 (extractor saw the
+    page but couldn't parse a title/byline/date). Overwrites the row's
+    fields with the new result when the retry succeeds; leaves rows
+    unchanged when the retry still fails. Returns
+    (refetched_count, recovered_count).
+    """
+    if not enriched_path.exists():
+        msg = f"enriched file not found: {enriched_path}. Run `enrich` first."
+        raise FileNotFoundError(msg)
+
+    ensure_dirs()
+
+    rows: list[dict[str, str]] = []
+    fieldnames: list[str] = []
+    targets: list[tuple[int, EnrichTarget]] = []
+    with enriched_path.open(newline="", encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        fieldnames = list(reader.fieldnames or ENRICHED_FIELDS)
+        for row in reader:
+            rows.append(row)
+            has_metadata = any(
+                row.get(k) for k in ("title", "byline", "published_at")
+            )
+            if not row.get("error") and has_metadata:
+                continue
+            url = row.get("url") or ""
+            ts = row.get("snapshot_timestamp") or ""
+            if not url or not ts:
+                continue
+            targets.append(
+                (
+                    len(rows) - 1,
+                    EnrichTarget(
+                        rollup_key=row.get("rollup_key") or "",
+                        kind=row.get("kind") or "",
+                        url=url,
+                        timestamp=ts,
+                    ),
+                )
+            )
+            if limit and len(targets) >= limit:
+                break
+
+    if not targets:
+        log.info("no failed rows to retry")
+        return (0, 0)
+
+    log.info(
+        "retrying %d failed rows using %d workers, delay=%.1fs",
+        len(targets),
+        workers,
+        delay,
+    )
+
+    write_lock = threading.Lock()
+
+    with make_client() as client:
+
+        def _process(target_pair: tuple[int, EnrichTarget]) -> int:
+            idx, target = target_pair
+            result = _fetch_and_extract(client, target, delay=delay)
+            new_row = _result_to_row(result)
+            recovered_now = bool(
+                not result.error
+                and (result.metadata.title or result.metadata.byline or result.metadata.published_at)
+            )
+            with write_lock:
+                # Replace the row outright — error/http_status/metadata all
+                # reflect the latest attempt. Preserve original
+                # snapshot_timestamp + url since those came from curated.
+                rows[idx].update(new_row)
+            return 1 if recovered_now else 0
+
+        outcomes = thread_map(
+            _process,
+            targets,
+            max_workers=workers,
+            desc="retry-failed",
+            unit="url",
+        )
+        recovered = sum(outcomes)
+
+    with enriched_path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+
+    log.info("recovered %d rows out of %d retried", recovered, len(targets))
+    return (len(targets), recovered)
+
+
 def enrich(
     *,
     curated_path: Path = CURATED_FILE,

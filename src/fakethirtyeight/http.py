@@ -12,7 +12,10 @@ import truststore
 DEFAULT_TIMEOUT = httpx.Timeout(connect=30.0, read=600.0, write=30.0, pool=30.0)
 DEFAULT_HEADERS = {
     "User-Agent": "fakethirtyeight/0.1 (+https://github.com/palewire/fivethirtyeightindex.com)",
-    "Accept-Encoding": "gzip",
+    # Wayback's id_ endpoint sometimes returns brotli-encoded HTML regardless
+    # of what we advertise, so we accept both. The brotli decoder is a project
+    # dep (httpx uses it automatically when present).
+    "Accept-Encoding": "gzip, br",
 }
 
 

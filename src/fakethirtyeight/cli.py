@@ -169,6 +169,23 @@ def rescrape_bylines(workers: int, delay: float, limit: int | None) -> None:
     click.echo(f"rescraped {total:,} rows, recovered {recovered:,} byline(s)")
 
 
+@cli.command("retry-failed")
+@click.option("--workers", type=int, default=4, show_default=True)
+@click.option("--delay", type=float, default=1.0, show_default=True)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap rows to re-fetch (smoke testing).",
+)
+def retry_failed(workers: int, delay: float, limit: int | None) -> None:
+    """Re-fetch rows that errored or came back with no metadata at all."""
+    total, recovered = enrich_mod.retry_failed(
+        workers=workers, delay=delay, limit=limit
+    )
+    click.echo(f"retried {total:,} rows, recovered {recovered:,}")
+
+
 @cli.command()
 def curate() -> None:
     """Filter to editorial URLs + roll up liveblogs/projects → data/curated.csv."""
