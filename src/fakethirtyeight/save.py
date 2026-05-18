@@ -18,9 +18,8 @@ import csv
 import logging
 import os
 import time
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import Iterator
 
 import httpx
 from tenacity import (

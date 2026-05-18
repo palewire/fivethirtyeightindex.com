@@ -519,12 +519,10 @@ def _load_all_rows(path: Path) -> tuple[list[dict[str, str]], list[str]]:
     a subtle bug where a ``limit`` short-circuit broke out of the read
     loop early and the subsequent overwrite truncated the file.
     """
-    rows: list[dict[str, str]] = []
     with path.open(newline="", encoding="utf-8") as fh:
         reader = csv.DictReader(fh)
         fieldnames = list(reader.fieldnames or ENRICHED_FIELDS)
-        for row in reader:
-            rows.append(row)
+        rows = list(reader)
     return rows, fieldnames
 
 
