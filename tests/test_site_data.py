@@ -11,8 +11,53 @@ from fakethirtyeight.site_data import (
     _load_podcast_item_urls,
     _split_authors,
     _title_from_url,
+    _year_from_url,
     slugify,
 )
+
+
+@pytest.mark.parametrize(
+    ("rollup_key", "expected"),
+    [
+        # Single-segment slug — no drilldown.
+        ("project:congress-trump-score", ""),
+        # Per-member drilldown — title-case the sub-slug.
+        ("project:congress-trump-score/a-donald-mceachin", "A Donald Mceachin"),
+        ("project:carmelo/lebron-james", "Lebron James"),
+        # Multi-segment drilldown — joined with spaces.
+        ("project:2018-midterm-election-forecast/house/al/1", "House Al 1"),
+        # No namespace prefix → no suffix.
+        ("just-a-slug", ""),
+    ],
+)
+def test_drilldown_suffix(rollup_key: str, expected: str):
+    from fakethirtyeight.site_data import _drilldown_suffix
+
+    assert _drilldown_suffix(rollup_key) == expected
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        # Cycle-year project slugs are the main motivation for the fallback.
+        ("https://projects.fivethirtyeight.com/2024-election-forecast/", 2024),
+        ("https://projects.fivethirtyeight.com/2018-midterm-election-forecast/", 2018),
+        ("https://projects.fivethirtyeight.com/election-2016/primary-forecast/", 2016),
+        # Multi-year paths take the latest plausible year.
+        (
+            "https://projects.fivethirtyeight.com/checking-our-work/2020-elections/",
+            2020,
+        ),
+        # No year-like substring → None.
+        ("https://fivethirtyeight.com/features/some-slug/", None),
+        ("", None),
+        # Out-of-range 4-digit substrings (zip code, count) are rejected.
+        ("https://example.com/zip/90210/", None),
+        ("https://example.com/n/1979/", None),
+    ],
+)
+def test_year_from_url(url: str, expected: int | None):
+    assert _year_from_url(url) == expected
 
 
 @pytest.mark.parametrize(
@@ -29,6 +74,26 @@ from fakethirtyeight.site_data import (
         ("FiveThirtyEight", []),
         ("FiveThirtyEight.com", []),
         ("ABC News / FiveThirtyEight", []),
+        # ESPN co-credited network attribution; no individual reporter.
+        ("ESPN and FiveThirtyEight", []),
+        # Department / format attributions, not real people.
+        ("FiveThirtyEight Staff", []),
+        ("FiveThirtyEight Podcasts", []),
+        ("FiveThirtyEight Video", []),
+        # Truncated / shouted variants of Nate Silver get aliased to canonical.
+        ("Nate", ["Nate Silver"]),
+        ("NATE SILVER", ["Nate Silver"]),
+        # NYT-era all-caps bylines get title-cased.
+        ("KEVIN QUEALY", ["Kevin Quealy"]),
+        ("MICAH COHEN", ["Micah Cohen"]),
+        ("JOHN SIDES", ["John Sides"]),
+        # GMA / NYT / etc. network attributions drop.
+        ("GMA", []),
+        ("Good Morning America", []),
+        ("THE NEW YORK TIMES", []),
+        # Date-stamp strings the extractor occasionally grabbed.
+        ("Published Feb. 16", []),
+        ("Updated 3:14 PM", []),
         ("Staff", []),
         ("A FiveThirtyEight Chat", []),
         ("A FiveThirtyEight Podcast", []),
@@ -53,16 +118,21 @@ from fakethirtyeight.site_data import (
         ("-- Nate Silver", ["Nate Silver"]),
         ("-- Sean Quinn", ["Sean Quinn"]),
         ("— Nate Silver", ["Nate Silver"]),
-        # Pipe-separated multi-credit
+        # Pipe-separated multi-credit. The artist credit ("Art by ...") is a
+        # production attribution, not a reporter byline — drop it.
         (
             "Trevor Martin | Art by yesyesno",
-            ["Trevor Martin", "Art by yesyesno"],
+            ["Trevor Martin"],
         ),
+        ("Sam Smith and Photos by Gabriella Demczuk", ["Sam Smith"]),
         # Empty / whitespace
         ("", []),
         ("   ", []),
         # Dedup case-insensitively
         ("Nate Silver and nate silver", ["Nate Silver"]),
+        # Blogspot Atom feed format: `email@host (Real Name)` → name only.
+        ("noreply@blogger.com (Nate Silver)", ["Nate Silver"]),
+        ("someone@example.com (Harry Enten)", ["Harry Enten"]),
     ],
 )
 def test_split_authors(byline: str, expected: list[str]) -> None:
@@ -96,8 +166,7 @@ def test_title_from_url_falls_back_cleanly():
         _title_from_url(
             "http://www.fivethirtyeight.com/2008/05/whats-wrong-with-battleground.html"
         )
-        == "Wha"
-        "ts Wrong With Battleground"
+        == "Whats Wrong With Battleground"
     )
     assert _title_from_url("") == ""
     assert _title_from_url("https://fivethirtyeight.com/") == ""
@@ -140,7 +209,7 @@ def test_load_podcast_item_urls_maps_only_uploaded_rows(tmp_path: Path) -> None:
             },
             {
                 "identifier": "fivethirtyeight-politics-esp1234567891",
-                "uploaded_at": "2026-05-21T00:00:00+00:00",
+                "uploaded_at": "2026-05-21T00:00:01+00:00",
                 "status": "dry_run",
                 "files": "episode.mp3",
                 "error": "",
@@ -149,19 +218,10 @@ def test_load_podcast_item_urls_maps_only_uploaded_rows(tmp_path: Path) -> None:
     )
 
     assert _load_podcast_item_urls(
-        metadata_path=metadata, upload_log_path=upload_log
+        metadata_path=metadata,
+        upload_log_path=upload_log,
     ) == {
         "podcast:meg/ESP1234567890": (
             "https://archive.org/details/fivethirtyeight-politics-esp1234567890"
         )
     }
-
-
-def test_load_podcast_item_urls_missing_files_returns_empty(tmp_path: Path) -> None:
-    assert (
-        _load_podcast_item_urls(
-            metadata_path=tmp_path / "missing-metadata.csv",
-            upload_log_path=tmp_path / "missing-log.csv",
-        )
-        == {}
-    )

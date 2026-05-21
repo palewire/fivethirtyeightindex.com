@@ -44,5 +44,6 @@ export function search(
 
 	const hits = idx.search(trimmed) as unknown as Array<Entry & { score: number }>;
 	const filtered = kinds && kinds.size > 0 ? hits.filter((h) => kinds.has(h.kind)) : hits;
+	filtered.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
 	return filtered.slice(0, limit);
 }

@@ -17,11 +17,13 @@ from fakethirtyeight import download_podcasts as download_podcasts_mod
 from fakethirtyeight import duplicates as duplicates_mod
 from fakethirtyeight import enrich as enrich_mod
 from fakethirtyeight import export as export_mod
+from fakethirtyeight import feeds as feeds_mod
 from fakethirtyeight import ia_image_upload as ia_image_upload_mod
 from fakethirtyeight import ia_upload as ia_upload_mod
 from fakethirtyeight import images as images_mod
 from fakethirtyeight import merge as merge_mod
 from fakethirtyeight import podcast_metadata as podcast_metadata_mod
+from fakethirtyeight import save as save_mod
 from fakethirtyeight import save_now as save_now_mod
 from fakethirtyeight import site_data as site_data_mod
 from fakethirtyeight import sitemaps as sitemaps_mod
@@ -116,6 +118,66 @@ def sitemaps(workers: int, delay: float, host: str) -> None:
     """Pull captured sitemap.xml files from Wayback, parse URLs."""
     count = sitemaps_mod.enrich(workers=workers, delay=delay, host=host)
     click.echo(f"discovered {count} URLs from sitemaps")
+
+
+@cli.command()
+@click.option("--feed-url", required=True, help="Archived feed URL to walk.")
+@click.option(
+    "--host",
+    default=None,
+    help="Host label for output files (defaults to feed URL hostname).",
+)
+@click.option("--workers", type=int, default=4, show_default=True)
+@click.option("--delay", type=float, default=0.5, show_default=True)
+@click.option(
+    "--sample-every-days",
+    type=int,
+    default=None,
+    help="Keep one memento per N-day bucket to reduce redundant fetches.",
+)
+@click.option("--start-year", type=int, default=None)
+@click.option("--end-year", type=int, default=None)
+def feeds(
+    feed_url: str,
+    host: str | None,
+    workers: int,
+    delay: float,
+    sample_every_days: int | None,
+    start_year: int | None,
+    end_year: int | None,
+) -> None:
+    """Walk Wayback snapshots of an Atom/RSS feed to recover post URLs + metadata."""
+    fetched, found = feeds_mod.walk(
+        feed_url,
+        host=host,
+        workers=workers,
+        delay=delay,
+        sample_every_days=sample_every_days,
+        start_year=start_year,
+        end_year=end_year,
+    )
+    click.echo(
+        f"fetched {fetched:,} feed mementos, discovered {found:,} unique post URLs"
+    )
+
+
+@cli.command("save-to-wayback")
+@click.option(
+    "--feed-csv",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="Path to a data/feed-*.csv whose 'url' column gets submitted.",
+)
+@click.option("--delay", type=float, default=5.0, show_default=True)
+@click.option("--limit", type=int, default=None, help="Cap submissions (smoke test).")
+def save_to_wayback(feed_csv: Path, delay: float, limit: int | None) -> None:
+    """Submit each URL in a feed CSV to Wayback Save Page Now."""
+    urls = list(save_mod.urls_from_feed_csv(feed_csv))
+    if limit:
+        urls = urls[:limit]
+    click.echo(f"submitting {len(urls):,} URLs (delay={delay}s)")
+    submitted, errored = save_mod.submit_urls(urls, delay=delay)
+    click.echo(f"queued {submitted:,} for capture, {errored:,} failed")
 
 
 @cli.command()
@@ -582,10 +644,53 @@ def upload_podcasts(
 )
 def rescrape_bylines(workers: int, delay: float, limit: int | None) -> None:
     """Re-fetch rows with empty byline and try the updated extractor."""
-    total, recovered = enrich_mod.rescrape_bylines(
+    total, recovered, errored = enrich_mod.rescrape_bylines(
         workers=workers, delay=delay, limit=limit
     )
-    click.echo(f"rescraped {total:,} rows, recovered {recovered:,} byline(s)")
+    click.echo(
+        f"rescraped {total:,} rows, recovered {recovered:,} byline(s), "
+        f"{errored:,} transient failure(s)"
+    )
+
+
+@cli.command("rescrape-dates")
+@click.option("--workers", type=int, default=4, show_default=True)
+@click.option("--delay", type=float, default=1.0, show_default=True)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap rows to re-fetch (smoke testing).",
+)
+def rescrape_dates(workers: int, delay: float, limit: int | None) -> None:
+    """Upgrade YYYY-MM rows to full YYYY-MM-DD via the Blogspot date-header."""
+    total, recovered, errored = enrich_mod.rescrape_dates(
+        workers=workers, delay=delay, limit=limit
+    )
+    click.echo(
+        f"rescraped {total:,} rows, recovered {recovered:,} full date(s), "
+        f"{errored:,} transient failure(s)"
+    )
+
+
+@cli.command("retry-failed")
+@click.option("--workers", type=int, default=4, show_default=True)
+@click.option("--delay", type=float, default=1.0, show_default=True)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap rows to re-fetch (smoke testing).",
+)
+def retry_failed(workers: int, delay: float, limit: int | None) -> None:
+    """Re-fetch rows that errored or came back with no metadata at all."""
+    total, recovered, errored = enrich_mod.retry_failed(
+        workers=workers, delay=delay, limit=limit
+    )
+    click.echo(
+        f"retried {total:,} rows, recovered {recovered:,}, "
+        f"{errored:,} transient failure(s)"
+    )
 
 
 @cli.command()

@@ -6,6 +6,12 @@ __all__ = ["__version__"]
 
 from importlib.metadata import PackageNotFoundError, version
 
+from dotenv import load_dotenv
+
+# Load .env from cwd so IA_ACCESS_KEY/IA_SECRET_KEY etc. are available
+# before any submodule reads os.environ. Happens once per process.
+load_dotenv()
+
 try:
     __version__ = version("fakethirtyeight")
 except PackageNotFoundError:  # pragma: no cover

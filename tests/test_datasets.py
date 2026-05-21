@@ -107,7 +107,7 @@ def test_apply_related_story_dates_uses_earliest_matched_article_date(
     enriched = tmp_path / "enriched.csv"
     enriched.write_text(
         "rollup_key,published_at\n"
-        "article:features/how-our-raptor-metric-works,2019-10-10T12:00:00+00:00\n"
+        "article:how-our-raptor-metric-works,2019-10-10T12:00:00+00:00\n"
         "project:nba-player-ratings,2020-01-01T12:00:00+00:00\n",
         encoding="utf-8",
     )
