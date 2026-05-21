@@ -5,9 +5,10 @@
 
 	interface Props {
 		entries: Entry[];
+		showByline?: boolean;
 	}
 
-	let { entries }: Props = $props();
+	let { entries, showByline = true }: Props = $props();
 
 	/** YYYY-MM-DD from full ISO timestamps; shorter dates (Blogspot-era
 	 *  YYYY-MM) pass through unmodified. */
@@ -23,7 +24,7 @@
 		<tr>
 			<th scope="col">Date</th>
 			<th scope="col">Headline</th>
-			<th scope="col">Byline</th>
+			{#if showByline}<th scope="col">Byline</th>{/if}
 		</tr>
 	</thead>
 	<tbody>
@@ -35,14 +36,14 @@
 				<td class="c-title">
 					<a href={entry.url} rel="noopener external" target="_blank">{entry.title}</a>
 				</td>
-				<td class="c-byline">
+				{#if showByline}<td class="c-byline">
 					{#each entry.authors as name, i (name)}
 						<a href="{base}/byline/{slugify(name)}/">{name}</a>{i < entry.authors.length - 1
 							? ', '
 							: ''}
 					{/each}
 					{#if entry.authors.length === 0 && entry.byline}{entry.byline}{/if}
-				</td>
+				</td>{/if}
 			</tr>
 		{/each}
 	</tbody>
