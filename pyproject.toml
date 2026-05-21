@@ -7,11 +7,14 @@ name = "fakethirtyeight"
 dynamic = ["version"]
 requires-python = ">=3.11"
 dependencies = [
+    "anthropic>=0.103.1",
     "beautifulsoup4",
     "brotli",
     "click",
     "httpx",
+    "internetarchive>=5.8.0",
     "lxml",
+    "mutagen>=1.47.0",
     "python-dotenv",
     "tenacity",
     "tqdm",

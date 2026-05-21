@@ -24,14 +24,20 @@
 				>
 			</li>
 		{/each}
+		<li class="see-all">
+			<a href="{base}/byline/">See all {total.toLocaleString()} bylines -></a>
+		</li>
 	</ul>
-	<p class="see-all">
-		<a href="{base}/byline/">See all {total.toLocaleString()} bylines →</a>
-	</p>
 </div>
 
 <style>
 	.see-all a {
+		color: var(--color-fg);
+		font-weight: var(--font-weight-regular);
+	}
+
+	.see-all a:hover {
+		color: var(--color-link);
 		text-decoration: underline;
 	}
 </style>

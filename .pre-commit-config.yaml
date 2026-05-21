@@ -5,9 +5,15 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
+        exclude: &generated-data >
+          (?x)^(
+            data/.*\.csv|
+            web/static/data/.*\.(csv|json)
+          )$
       - id: fix-byte-order-marker
       - id: check-case-conflict
       - id: mixed-line-ending
+        exclude: *generated-data
       - id: check-merge-conflict
       - id: check-toml
       - id: check-yaml
@@ -16,6 +22,7 @@ repos:
       - id: check-json
       - id: forbid-submodules
       - id: end-of-file-fixer
+        exclude: *generated-data
       - id: debug-statements
       - id: check-ast
 

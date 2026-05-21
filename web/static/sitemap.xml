@@ -2,12 +2,10 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://fivethirtyeightindex.com/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/</loc></url>
+  <url><loc>https://fivethirtyeightindex.com/dataset/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2008/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2009/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2010/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2011/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2012/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2013/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2014/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2015/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2016/</loc></url>
@@ -19,7 +17,6 @@
   <url><loc>https://fivethirtyeightindex.com/year/2022/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2023/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2024/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2025/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2008/03/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2008/04/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2008/05/</loc></url>
@@ -38,10 +35,6 @@
   <url><loc>https://fivethirtyeightindex.com/year/2009/06/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2009/07/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2009/08/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2009/09/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2009/10/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2009/11/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2009/12/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2010/01/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2010/02/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2010/03/</loc></url>
@@ -50,59 +43,10 @@
   <url><loc>https://fivethirtyeightindex.com/year/2010/06/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2010/07/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2010/08/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2010/09/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2010/10/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2010/11/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2010/12/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2011/01/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2011/02/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2011/03/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2011/04/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2011/05/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2011/06/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2011/07/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2011/08/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2011/09/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2011/10/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2011/11/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2011/12/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2012/01/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2012/02/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2012/03/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2012/04/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2012/05/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2012/06/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2012/07/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2012/08/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2012/09/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2012/10/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2012/11/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2012/12/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2013/01/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2013/02/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2013/03/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2013/04/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2013/05/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2013/06/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2013/07/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2013/08/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2013/09/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2013/10/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2013/12/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2014/01/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2014/02/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2014/03/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2014/04/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2014/05/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2014/06/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2014/07/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2014/08/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2014/09/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2014/10/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2014/11/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2014/12/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2015/01/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2015/02/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2015/03/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2015/04/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2015/05/</loc></url>
@@ -124,7 +68,6 @@
   <url><loc>https://fivethirtyeightindex.com/year/2016/09/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2016/10/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2016/11/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2016/12/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2017/01/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2017/02/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2017/03/</loc></url>
@@ -206,580 +149,109 @@
   <url><loc>https://fivethirtyeightindex.com/year/2023/07/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2023/08/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2023/09/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2023/10/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2023/11/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2023/12/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2024/01/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2024/02/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2024/03/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2024/04/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2024/05/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2024/06/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2024/07/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2024/08/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/year/2024/09/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2024/10/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2024/11/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2024/12/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2025/01/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2025/02/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/year/2025/03/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/aaron-bycoffe/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/aaron-johnson/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/abby-abrams/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/adam-kelsey/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/al-johri/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/alan-siegel/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/alan-yan/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/albert-larcada/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/alex-kirshner/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/alex-newman/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/alex-samuels/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/alice-callahan/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/allie-gross/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/allison-mccann/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/alok-pattani/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/alyssa-longmuir/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/amanda-palleschi/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/amelia-thomson-deveaux/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/amina-brown/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/amir-sufi/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/amy-lundy/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/amy-rothschild/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/andrea-jones-rooy/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/andrei-scheinkman/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/andres-waters/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/andrew-beaton/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/andrew-d-martin/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/andrew-flowers/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/andrew-gelman/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/andrew-mooney/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/andrew-olenski/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/andrew-r-lewis/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/andy-schwarz/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/angelica-puzio/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/angie-maxwell/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/anil-kashyap/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/anna-flagg/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/anna-hazard/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/anna-maria-barry-jester/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/anna-orso/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/anna-rothschild/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/anna-wiederkehr/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/anne-li/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/anne-pluta/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/annette-choi/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/annika-merrilees/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/anupam-b-jena/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ari-levin/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ariel-edwards-levy/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ariel-stulberg/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ashley-zhao/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/aswath-damodaran/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/atif-mian/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/barton-swaim/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/batya-ungar-sargon/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/baxter-holmes/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/ben-casselman/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ben-dowsett/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ben-lauderdale/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ben-lindbergh/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ben-wieder/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/benjamin-montet/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/benjamin-morris/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/berk-ozler/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/bernard-mendez/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/betsy-ladyzhets/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/blythe-terrell/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/bobby-gardiner/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/brent-rose/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/bria-felicien/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/brian-burke/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/brian-j-mccabe/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/brian-menendez/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/brian-mills/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/brian-schaffner/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/brian-switek/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/brian-wise/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/brian-yutko/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/brin-jonathan-butler/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/brittany-lyte/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/brooke-borel/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/brooks-miner/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/bruce-kogut/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/caitlin-cooper/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/caitlin-murray/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/cally-carswell/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/calvin-watkins/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/calvin-wetzel/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/candice-norwood/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/carl-bialik/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/carla-correa/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/carrie-levine/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/cassie-owens/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/catherine-putz/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/cathleen-o-grady/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/chad-syverson/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/chadwick-matlin/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/champe-barton/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/charlie-smart/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/chase-stuart/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/chris-forsberg/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/chris-hanretty/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/chris-herring/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/chris-zubak-skees/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/christianna-silva/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/christie-aschwanden/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/christine-laskowski/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/christopher-donato/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/christopher-groskopf/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/christopher-j-devine/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/chryl-laird/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/clare-malone/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/clay-dillow/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/cooper-burton/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/craig-fehrman/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/curtis-yee/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/cynthia-cc-dubois/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/damini-sharma/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/dan-hopkins/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/dan-szymborski/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/dana-goldstein/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/daniel-a-medina/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/daniel-babin/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/daniel-berman/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/daniel-cox/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/daniel-engber/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/daniel-lathrop/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/daniel-levitt/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/daniel-m-blumenthal/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/daniel-nass/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/daniel-nichanian/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/daniel-r-braunstein/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/danyel-reiche/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/dave-mcmenamin/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/dave-peterson/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/david-bunnell/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/david-byler/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/david-dagan/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/david-firestone/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/david-goldenberg/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/david-leonhardt/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/david-mcintire/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/david-nield/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/david-nussbaum/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/david-spievack/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/david-temple/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/david-wasserman/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/dean-oliver/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/derek-shan/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/dhrumil-mehta/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/dhruv-khullar/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/diane-a-kelly/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/dimitrije-curcic/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/donna-m-airoldi/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/donovan-x-ramsey/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/dorothy-j-gentry/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/dorothy-kronick/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/doug-webber/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/douglas-skinner/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/drae-harris/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/dvora-meyers/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ed-feng/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/ed-kilgore/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/eileen-guo/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/eitan-hersh/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/elan-hope/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/elena-mejia/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/elizabeth-thomas/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/ella-koeze/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/emelia-gold/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/emily-ekins/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/emily-oster/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/emily-scherer/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/emily-st-john-mandel/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/emily-venezky/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/emma-pierson/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/emma-riley/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/emma-span/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/eno-sarris/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/eric-benson/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/eric-edholm/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/eric-feltham/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/eric-holthaus/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/eric-tulsky/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/erin-cassese/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/erin-doherty/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/erin-einhorn/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/erin-hare/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/etan-green/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ethan-porter/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ethan-sherwood-strauss/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/evan-davis/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/evan-horowitz/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/farai-chideya/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/faye-flam/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/filed-under-contracts/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/fivey-fox/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/francisco-toro/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/g-elliott-morris/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/galen-druke/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/gary-rivlin/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/gavin-schmidt/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/geoff-foster/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/geoffrey-skelley/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/grace-lynch/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/grace-manthey/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/greg-guglielmo/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/greg-matthews/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/gretchen-johnson/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/gus-wezerek/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/guy-molyneux/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/hakeem-jefferson/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/hale-stewart/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/hannah-fingerhut/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/hannah-moots/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/hans-noel/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/harry-enten/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/hayley-munguia/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/heather-krause/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/hilary-krieger/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/holly-fuong/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/hope-allchin/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/hot-takedown/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/howard-megdal/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/humera-lodhi/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ian-begley/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ian-evans/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ian-levy/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ilene-prusher/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ismail-white/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/j-a-adande/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/j-nathan-matias/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jacob-neiheisel/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jacob-r-neiheisel/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jaime-longoria/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jake-arlow/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/jake-lourim/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/james-curley/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/james-l-jackson/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jamiles-lartey/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/janie-velencia/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jared-dubin/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/jasmine-mithani/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jason-reid/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/jay-boice/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jay-ulfelder/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jean-yi/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jed-kolko/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jeff-asher/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jeff-leek/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/jeff-nussbaum/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jeff-pearlman/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jeff-sackmann/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jeff-stotts/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jeff-sullivan/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jenn-hatfield/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jenni-gritters/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jennifer-kanjana/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jennifer-mason/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jeremy-singer-vine/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jesse-alston/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/jesse-howe/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jesse-washington/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jessica-glazer/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jia-zhang/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jim-pagels/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/joanna-kao/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jody-avirgan/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/joe-sykes/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/joel-werner/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/john-curtice/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/john-ezekowitz/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/john-loeppky/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/john-m-drake/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/john-muller/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/john-rizzardini/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/john-ryle/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/john-sides/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/john-verhovek/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jonah-keri/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jonathon-braden/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jonathon-p-schuldt/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/jorge-estrada/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/josh-gray/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/josh-hermsmeyer/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/josh-planos/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/josh-putnam/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/joshua-darr/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/joshua-eaton/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/joshua-fischman/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/joshua-grossman/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/julia-azari/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/julia-craven/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/julia-wolfe/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/julian-kim/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/julian-mckenzie/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/justin-moore/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/justin-verrier/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/justine-calma/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kaiser-fung/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/kaleigh-rogers/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kara-chin/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/karen-k-ho/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kate-fagan/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kate-larue/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/katherine-hobson/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/katherine-rowe/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kathryn-casteel/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/katie-marriner/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kelley-l-carter/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ken-woolums/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kendall-karson/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kendra-pierre-louis/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kermit-l-schoenholtz/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kerry-emanuel/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kevin-carmichael/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kevin-cope/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kevin-m-quinn/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kevin-quealy/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kiara-alfonseca/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kimberly-winston/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kirk-goldsberry/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/koji-takahashi/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kostya-kennedy/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/krishna-narsu/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/krista-langlois/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/kristen-soltis-anderson/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/krystnell-a-storr/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kshitij-aranke/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kyle-bourassa/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/kyle-c-kopko/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/kyle-wagner/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/laura-bronner/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/laura-hudson/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/laurie-shaw/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/leah-askarinam/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/leah-libresco/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/leah-shaffer/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/lee-drutman/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/lester-black/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/likhitha-butchireddygari/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/lisa-chow/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/louis-zatzman/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/lucia-he/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/luke-jensen/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/lyndsey-gilpin/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mackenzie-wilkes/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/maddie-sach/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/madeleine-schwartz/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/maggie-koerth/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/maggie-koerth-baker/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mai-nguyen/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/maia-szalavitz/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/maimuna-majumder/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mallory-pickett/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/marc-ambinder/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/maria-konnikova/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/marisa-ingemi/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mark-blumenthal/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mary-radcliffe/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/maryn-mckenna/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/matt-fitzpatrick/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/matt-giles/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/matt-grossmann/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/matt-lanza/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/matthew-conlen/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/matthew-vann/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/maya-sweedler/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mc-barrett/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/meena-ganesan/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/meghan-ashford-grooms/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/meghan-mcdonough/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/melissa-deckman/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/meredith-conroy/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/micah-cohen/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michael-ajeto/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michael-bertin/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michael-c-wright/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michael-caley/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michael-chiang/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michael-e-feroli/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michael-easter/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michael-lopez/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michael-pina/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michael-salfino/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/michael-tabb/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michael-tesler/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michael-wallace/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michael-wilner/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/michelle-cheng/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mike-beuoy/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mike-goodman/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mike-lynch/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mike-mazzeo/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mike-prada/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mike-wilson/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mikhail-zinshteyn/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/milo-beckman/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mimi-onuoha/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/mona-chalabi/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/monica-potts/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/monica-vendituoli/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/morgan-jerkins/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/namita-nandakumar/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/nash-consing/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/natalia-mazotte/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/natalie-jackson/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/nate-silver/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/nathan-l-gonzales/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/nathaniel-rakich/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/neil-lewis-jr/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/neil-paine/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/nicholas-a-christakis/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/nicholas-danforth/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/nicholas-som/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/nick-corasaniti/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/nick-friedell/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/noah-davis/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ohm-youngmisuk/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/oliver-roeder/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/owen-phillips/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/pablo-s-torre/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/paroma-soni/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/patrick-redford/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/patrick-reevell/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/patrick-ruffini/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/paul-a-djupe/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/paul-sabin/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/pavielle-haines/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/perry-bacon-jr/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/pete-madden/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/peter-hooper/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/peter-hunsberger/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/peter-k-enns/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/peter-keating/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/peter-tanner/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/phil-birnbaum/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/philip-kiefer/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/pia-catton/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/pravin-santhanam/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/rachael-dottle/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ramin-skibba/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/randall-munroe/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/randy-olson/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/rebecca-boyle/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/rebecca-klein/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/rebecca-shimoni-stoil/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/renard-sexton/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/reuben-fischer-baum/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/rian-watt/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/richard-johnson/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/ritchie-king/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/rob-arthur/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/rob-neyer/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/robert/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/robert-frank/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/robert-o-connell/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/roger-pielke-jr/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/rose-eveleth/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ross-benes/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/royce-young/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/ryan-best/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ryan-felton/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ryan-matsumoto/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ryan-nantell/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ryan-ohanlon/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/ryan-p-burge/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/sakshi-jain/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sam-dean/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sam-henick/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sam-miller/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/samantha-sergi/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/samuel-sinyangwe/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/santul-nerkar/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sara-patterson/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/sara-reardon/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/sara-ziegler/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sarah-darville/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sarah-feldman/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/sarah-frostenson/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sarah-laskow/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sarah-shachat/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sarah-wheaton/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/saul-austerlitz/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/scott-ganz/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/scott-kacsmar/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sean-campbell/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/sean-quinn/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sebastian-saiegh/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/seth-gitter/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/seth-hill/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/seth-masket/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/seth-walder/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/setrige-crawford/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/shakeia-taylor/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/shannon-tiezzi/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sharon-b-katz/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sharon-brown/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sheila-m-eldred/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/shom-mazumder/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/simone-landon/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/simran-parwani/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/sinduja-srinivasan/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/soo-rin-kim/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/sophia-lebowitz/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sriram-subramanian/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sruthi-palaniappan/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/stan-alcorn/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/stephanie-h-murray/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/stephanie-roos/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/stephen-g-cecchetti/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/stephen-pettigrew/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/stephen-stirling/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/stewart-richardson/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/suresh-naidu/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/sydney-bauer/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/t-j-mcbride/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/terrence-doyle/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/the-editors/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/theodore-r-johnson/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/thomas-dollar/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/thomas-j-wood/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/tim-dix/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/tim-macmahon/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/tim-mullaney/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/tim-wigmore/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/timothy-hill/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/tiye-sheppard/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/todd-schneider/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/todd-whitehead/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/tom-ley/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/tom-perrotta/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/tom-schaller/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/tony-chow/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/travis-sawchik/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/trevor-martin/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/ty-schalter/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/vanessa-diaz/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/victor-matheson/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/victor-ray/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/walt-hickey/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/weihua-li/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/wiley-schubert-reed/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/will-fein/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/will-steakin/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/william-d-adler/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/william-howell/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/william-t-adler/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/yaron-weitzman/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/yuliya-panfil/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/yutong-yuan/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/zach-binney/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/zach-bradshaw/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/zach-weinersmith/</loc></url>
   <url><loc>https://fivethirtyeightindex.com/byline/zach-wissner-gross/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/zoe-mclaren/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/zoha-qamar/</loc></url>
-  <url><loc>https://fivethirtyeightindex.com/byline/zubin-jelveh/</loc></url>
 </urlset>

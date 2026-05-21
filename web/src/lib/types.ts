@@ -16,3 +16,14 @@ export interface Entry {
 	kind: Kind;
 	url: string;
 }
+
+export interface Dataset {
+	id: string;
+	slug: string;
+	title: string;
+	dataset_url: string;
+	article_urls: string[];
+	article_count: number;
+	archive_url: string;
+	date: string;
+}
