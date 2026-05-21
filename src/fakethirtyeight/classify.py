@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 KIND_ARTICLE = "article"
 KIND_LIVEBLOG = "liveblog"
@@ -71,6 +71,15 @@ _WP_DATE_ARCHIVE = re.compile(
 _HAS_PAGE_N = re.compile(r"/page/\d+/?$|/page/\d+/")
 # /features/<slug>/comment-page-N/
 _COMMENT_PAGE = re.compile(r"/comment-page-\d+/?$")
+# NYT-era permalinks under fivethirtyeight.blogs.nytimes.com:
+# /YYYY/MM/DD/some-slug/
+_NYT_PERMALINK = re.compile(
+    r"^/(?P<year>20\d{2})/(?P<month>\d{2})/(?P<day>\d{2})/(?P<slug>[^/]+?)/?$"
+)
+# Megaphone hosts each episode under a stable `ESP<digits>` ID. The same ID
+# appears in feeds.megaphone.fm/<ID>, traffic.megaphone.fm/<ID>.mp3, and inside
+# the podtrac/pscrb tracking-redirect URLs that wrap the audio.
+_MEGAPHONE_EP_ID = re.compile(r"(ESP\d+)", re.IGNORECASE)
 
 _NUMERIC = re.compile(r"^\d+$")
 
@@ -118,6 +127,44 @@ def classify(url: str, host: str | None = None) -> Classification:
     # Strip ``www.`` so the main-host rules apply uniformly.
     bare_host = h[4:] if h.startswith("www.") else h
 
+    # ---- podcast hosts (Megaphone + redirect wrappers) -----------------
+    # The FiveThirtyEight Politics show was hosted on Megaphone; episode
+    # audio URLs cycle through podtrac → pscrb.fm → traffic.megaphone.fm,
+    # all of which embed the same `ESP<digits>` episode ID. Rolling up by
+    # that ID merges duplicates across the redirect chain and across
+    # multiple captures of the same episode.
+    if (
+        bare_host
+        in {
+            "feeds.megaphone.fm",
+            "traffic.megaphone.fm",
+            "podtrac.com",
+            "www.podtrac.com",
+            "pscrb.fm",
+        }
+        or "megaphone.fm" in bare_host
+    ):
+        m = _MEGAPHONE_EP_ID.search(url)
+        if m:
+            return Classification(KIND_PODCAST, f"podcast:meg/{m.group(1).upper()}")
+
+    # ---- fivethirtyeight.blogs.nytimes.com (NYT era, 2010-2014) ---------
+    # Permalinks were /YYYY/MM/DD/<slug>/. Roll up by slug into the same
+    # `article:<slug>` namespace as the post-NYT eras so a post that was
+    # republished after the move dedupes naturally.
+    if bare_host == "fivethirtyeight.blogs.nytimes.com":
+        if not segs:
+            return Classification(KIND_HOMEPAGE, "nyt:/")
+        m = _NYT_PERMALINK.match(path)
+        if m:
+            return Classification(KIND_ARTICLE, f"article:{m.group('slug')}")
+        # /tag/<x>/, /author/<x>/, /page/N/ etc. — section noise.
+        if segs[0] in {"tag", "author", "category"}:
+            return Classification(KIND_TAG, f"tag:nyt/{path}")
+        if segs[0] == "page" or _HAS_PAGE_N.search(path):
+            return Classification(KIND_PAGINATED, f"paginated:nyt{path}")
+        return Classification(KIND_OTHER, f"nyt-other:{path}")
+
     # ---- projects.fivethirtyeight.com -----------------------------------
     if bare_host == "projects.fivethirtyeight.com":
         if not segs:
@@ -161,27 +208,30 @@ def classify(url: str, host: str | None = None) -> Classification:
         # canonical path is `/live-blog/` (hyphenated) but the early site
         # used `/liveblog/` and `/liveblogs/` as well. All variants roll up
         # to the same `liveblog:<slug>` key so dupes across URL forms merge.
+        # Slugs are URL-decoded and whitespace-collapsed so a literal-space
+        # slug (e.g. `2016-%20election-results-%20coverage`) merges with
+        # its clean sibling.
         if first in {"live-blog", "liveblog", "liveblogs"}:
             if len(segs) >= 2:
-                return Classification(KIND_LIVEBLOG, f"liveblog:{segs[1]}")
-            return Classification(KIND_LIVEBLOG, "liveblog:")
+                slug = re.sub(r"[-\s]+", "-", unquote(segs[1])).strip("-")
+                return Classification(KIND_LIVEBLOG, f"liveblog:{slug}")
+            # Bare `/live-blog/` is the section landing, not an editorial
+            # post — emit it as a section so it doesn't pollute the corpus
+            # with an empty-slug entry.
+            return Classification(KIND_SECTION, "section:live-blog")
 
-        # Features articles
-        if first == "features":
+        # Features + DataLab era articles share slugs; roll up together.
+        if first in {"features", "datalab"}:
             if len(segs) == 2:
-                return Classification(KIND_ARTICLE, f"article:features/{segs[1]}")
+                return Classification(KIND_ARTICLE, f"article:{segs[1]}")
             # /features/<slug>/comment-page-N/ → paginated
             if _COMMENT_PAGE.search(path):
                 return Classification(KIND_PAGINATED, f"paginated:{path}")
             # /features (landing index)
-            if len(segs) == 1:
+            if len(segs) == 1 and first == "features":
                 return Classification(KIND_SECTION, "section:features")
             # Anything deeper that isn't comments is "other" noise
             return Classification(KIND_OTHER, f"other:{path}")
-
-        # DataLab era articles
-        if first == "datalab" and len(segs) == 2:
-            return Classification(KIND_ARTICLE, f"article:datalab/{segs[1]}")
 
         # Pre-`projects.fivethirtyeight.com` interactive projects lived at
         # `/interactives/<slug>/` (and were paginated for archive views,
@@ -206,12 +256,13 @@ def classify(url: str, host: str | None = None) -> Classification:
                 return Classification(KIND_SECTION, "section:podcasts")
             return Classification(KIND_OTHER, f"other:{path}")
 
-        # Methodology
+        # Methodology — roll up by first segment after /methodology/. Anything
+        # deeper (e.g. `/API`, `/:amp:story`, URL-encoded text fragments) is
+        # Wayback drilldown noise rather than a distinct doc.
         if first == "methodology":
-            return Classification(
-                KIND_METHODOLOGY,
-                f"methodology:{path.rstrip('/')}",
-            )
+            if len(segs) >= 2:
+                return Classification(KIND_METHODOLOGY, f"methodology:{segs[1]}")
+            return Classification(KIND_METHODOLOGY, "methodology:")
 
         # Section landings/sub-landings.
         # Only depth=1 (e.g. /politics/) or shallow non-page sub-landings

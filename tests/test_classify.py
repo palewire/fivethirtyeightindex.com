@@ -31,13 +31,13 @@ CASES: list[tuple[str, str, str]] = [
     (
         "https://fivethirtyeight.com/features/the-real-mvp-of-the-finals/",
         KIND_ARTICLE,
-        "article:features/the-real-mvp-of-the-finals",
+        "article:the-real-mvp-of-the-finals",
     ),
     # DataLab era article
     (
         "https://fivethirtyeight.com/datalab/why-this-poll-matters/",
         KIND_ARTICLE,
-        "article:datalab/why-this-poll-matters",
+        "article:why-this-poll-matters",
     ),
     # Features comment pagination should be paginated, not article
     (
@@ -106,11 +106,65 @@ CASES: list[tuple[str, str, str]] = [
         KIND_PODCAST,
         "podcast:episode-100",
     ),
-    # Methodology
+    # Methodology — only the first segment after /methodology/ counts;
+    # deeper paths are Wayback drilldown junk.
     (
         "https://fivethirtyeight.com/methodology/how-our-pollster-ratings-work/",
         KIND_METHODOLOGY,
-        "methodology:/methodology/how-our-pollster-ratings-work",
+        "methodology:how-our-pollster-ratings-work",
+    ),
+    (
+        "https://fivethirtyeight.com/methodology/how-our-pollster-ratings-work/API",
+        KIND_METHODOLOGY,
+        "methodology:how-our-pollster-ratings-work",
+    ),
+    (
+        "https://fivethirtyeight.com/methodology/how-our-nba-predictions-work/:amp:story/amp",
+        KIND_METHODOLOGY,
+        "methodology:how-our-nba-predictions-work",
+    ),
+    # Liveblog with a literal space in the slug — URL-decoded and normalized
+    # so it merges with its clean sibling.
+    (
+        "http://fivethirtyeight.com/live-blog/2016-%20election-results-%20coverage/",
+        KIND_LIVEBLOG,
+        "liveblog:2016-election-results-coverage",
+    ),
+    # Bare /live-blog/ is the section landing, not an editorial post — must
+    # not surface as an empty-slug `liveblog:` rollup.
+    (
+        "http://fivethirtyeight.com/live-blog/",
+        KIND_SECTION,
+        "section:live-blog",
+    ),
+    # NYT-era post (2010-2014) — slug-only rollup namespace.
+    (
+        "http://fivethirtyeight.blogs.nytimes.com/2012/05/30/economically-obama-is-no-jimmy-carter/",
+        KIND_ARTICLE,
+        "article:economically-obama-is-no-jimmy-carter",
+    ),
+    (
+        "http://fivethirtyeight.blogs.nytimes.com/2013/11/01/some-slug",
+        KIND_ARTICLE,
+        "article:some-slug",
+    ),
+    # Podcast (Megaphone) — same episode reached via direct host,
+    # traffic. variant, or podtrac/pscrb redirect chain all roll up
+    # to the same ESP-ID key.
+    (
+        "https://feeds.megaphone.fm/ESP9835845353",
+        KIND_PODCAST,
+        "podcast:meg/ESP9835845353",
+    ),
+    (
+        "https://traffic.megaphone.fm/ESP9835845353.mp3",
+        KIND_PODCAST,
+        "podcast:meg/ESP9835845353",
+    ),
+    (
+        "https://www.podtrac.com/pts/redirect.mp3/pscrb.fm/rss/p/traffic.megaphone.fm/ESP9835845353.mp3?updated=1",
+        KIND_PODCAST,
+        "podcast:meg/ESP9835845353",
     ),
     # Section landings
     ("https://fivethirtyeight.com/politics/", KIND_SECTION, "section:politics"),

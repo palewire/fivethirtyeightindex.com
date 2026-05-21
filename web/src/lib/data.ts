@@ -16,8 +16,30 @@ export interface DataCache {
 	all: Entry[];
 	byId: Map<string, Entry>;
 	byYear: Map<number, Entry[]>;
+	byYearMonth: Map<string, Entry[]>; // key: "YYYY-MM"
 	byBylineSlug: Map<string, { name: string; entries: Entry[] }>;
 	years: number[];
+	/** Sorted list of YYYY-MM keys per year, e.g. monthsByYear.get(2020) → ["2020-01", "2020-02", …]. */
+	monthsByYear: Map<number, string[]>;
+}
+
+const MONTH_LABELS: Record<string, string> = {
+	'01': 'January',
+	'02': 'February',
+	'03': 'March',
+	'04': 'April',
+	'05': 'May',
+	'06': 'June',
+	'07': 'July',
+	'08': 'August',
+	'09': 'September',
+	'10': 'October',
+	'11': 'November',
+	'12': 'December'
+};
+
+export function monthLabel(mm: string): string {
+	return MONTH_LABELS[mm] ?? mm;
 }
 
 let cache: DataCache | null = null;
@@ -59,6 +81,7 @@ export async function loadEntries(fetcher?: typeof fetch): Promise<DataCache> {
 
 	const byId = new Map<string, Entry>();
 	const byYear = new Map<number, Entry[]>();
+	const byYearMonth = new Map<string, Entry[]>();
 	const byBylineSlug = new Map<string, { name: string; entries: Entry[] }>();
 
 	for (const entry of all) {
@@ -71,6 +94,18 @@ export async function loadEntries(fetcher?: typeof fetch): Promise<DataCache> {
 				byYear.set(entry.year, arr);
 			}
 			arr.push(entry);
+
+			// `date` is either an ISO timestamp, YYYY-MM-DD, or YYYY-MM.
+			// Only bucket by month when we have at least YYYY-MM precision.
+			const ym = entry.date && entry.date.length >= 7 ? entry.date.slice(0, 7) : null;
+			if (ym && /^\d{4}-\d{2}$/.test(ym)) {
+				let bucket = byYearMonth.get(ym);
+				if (!bucket) {
+					bucket = [];
+					byYearMonth.set(ym, bucket);
+				}
+				bucket.push(entry);
+			}
 		}
 
 		for (const author of entry.authors) {
@@ -88,6 +123,19 @@ export async function loadEntries(fetcher?: typeof fetch): Promise<DataCache> {
 	// Oldest year first — this is a chronological retrospective.
 	const years = [...byYear.keys()].sort((a, b) => a - b);
 
-	cache = { all, byId, byYear, byBylineSlug, years };
+	// Per-year ordered list of YYYY-MM keys, ascending.
+	const monthsByYear = new Map<number, string[]>();
+	for (const ym of byYearMonth.keys()) {
+		const year = Number(ym.slice(0, 4));
+		let arr = monthsByYear.get(year);
+		if (!arr) {
+			arr = [];
+			monthsByYear.set(year, arr);
+		}
+		arr.push(ym);
+	}
+	for (const arr of monthsByYear.values()) arr.sort();
+
+	cache = { all, byId, byYear, byYearMonth, byBylineSlug, years, monthsByYear };
 	return cache;
 }

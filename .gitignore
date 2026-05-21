@@ -4,7 +4,13 @@
 .claude
 
 # Crawl output (only the top-level data/ directory, not e.g. web/static/data/).
-/data/
+# Keep the slow-to-regenerate Wayback enrichment + feed-derived metadata
+# under version control. Everything else in data/ is either raw crawl
+# output (regeneratable via `crawl`) or deterministic from it (`merge`,
+# `curate`).
+/data/*
+!/data/enriched.csv
+!/data/feed-*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

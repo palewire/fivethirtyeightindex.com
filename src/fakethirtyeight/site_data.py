@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from fakethirtyeight.curate import CURATED_FILE
-from fakethirtyeight.enrich import ENRICHED_FILE
+from fakethirtyeight.enrich import ENRICHED_FILE, load_enriched
 from fakethirtyeight.metadata import _clean_title
 
 log = logging.getLogger(__name__)
@@ -58,6 +58,12 @@ _BYLINE_ROLE_PREFIX = re.compile(
     re.IGNORECASE,
 )
 
+#: Blogspot's Atom-feed author wrapper: ``someone@example.com (Real Name)``.
+#: Keep only the parenthesized display name. Pre-dates the extractor's
+#: cleanup but slipped into a thousand-plus enriched rows during the
+#: Blogspot-era enrich, so the build-time cleanup catches them too.
+_BLOGGER_EMAIL_AUTHOR = re.compile(r"^\s*\S+@\S+\s*\(([^)]+)\)\s*$")
+
 #: Canonical-form aliases for misspelled or CMS-handle bylines found in
 #: the source data. Comparison is case-insensitive on the key. The mapped
 #: value is used verbatim as the display name, so entries with the typo
@@ -68,6 +74,17 @@ _BYLINE_ALIASES: dict[str, str] = {
     "elena mejía": "Elena Mejia",
     "amelia thomson-deveaux": "Amelia Thomson-DeVeaux",
     "meena.ganesan": "Meena Ganesan",
+    # The 2008 Blogspot post-author span ran only the first name on a
+    # handful of posts; NYT-era atom feeds also occasionally upper-cased
+    # the byline. Normalize both to the canonical display form so the
+    # byline-page dedup and title+byline+date collapse work.
+    "nate": "Nate Silver",
+    "nate silver": "Nate Silver",
+    # Some Blogspot-era posts carried "Hale Bonddad Stewart" with a quoted
+    # nickname; the modern republish dropped the quotes. Normalize both to
+    # the canonical surname-only form so the dedup matches across eras.
+    'hale "bonddad" stewart': "Hale Stewart",
+    "hale bonddad stewart": "Hale Stewart",
 }
 
 #: Names that aren't actual people — staff/network/format attributions.
@@ -76,14 +93,39 @@ _NON_PERSON_BYLINES: frozenset[str] = frozenset(
     {
         "fivethirtyeight",
         "fivethirtyeight.com",
+        "fivethirtyeight staff",
+        "fivethirtyeight podcasts",
+        "fivethirtyeight video",
         "abc news",
         "abc news live",
+        "espn",
+        "gma",
+        "good morning america",
+        "the new york times",
         "staff",
         "a fivethirtyeight chat",
         "a fivethirtyeight podcast",
         "a fivethirtyeightchat",
         "rotha052",  # CMS account handle that surfaced as a byline
     }
+)
+
+
+#: Strings that the extractor occasionally picks up where a byline would
+#: normally be — date stamps, "Updated:" markers, etc. Drop on prefix match
+#: so date variants beyond the literal seen ones don't surface.
+_NON_PERSON_BYLINE_PREFIXES: tuple[str, ...] = (
+    "published ",
+    "updated ",
+    # Production credits that aren't reporter bylines: "Art by yesyesno",
+    # "Photos by Gabriella Demczuk", etc.
+    "art by ",
+    "design by ",
+    "illustration by ",
+    "illustrations by ",
+    "photos by ",
+    "photography by ",
+    "video by ",
 )
 
 
@@ -132,7 +174,7 @@ def build(
         msg = f"enriched file not found: {enriched_path}. Run `enrich` first."
         raise FileNotFoundError(msg)
 
-    enriched_by_id = _load_enriched(enriched_path)
+    enriched_by_id = load_enriched(enriched_path)
     records: list[SiteRecord] = []
 
     with curated_path.open(newline="", encoding="utf-8") as fh:
@@ -145,7 +187,12 @@ def build(
             record = _build_record(row, enrich)
             if record is None:
                 continue
+            if _is_junk_record(record):
+                continue
             records.append(record)
+
+    records = _dedupe_articles(records)
+    _disambiguate_project_drilldown_titles(records)
 
     # Sort: oldest first. This is a retrospective archive — chronological
     # reading order makes more sense than newest-first.
@@ -191,14 +238,217 @@ def build(
     return len(records)
 
 
-def _load_enriched(path: Path) -> dict[str, dict[str, str]]:
-    out: dict[str, dict[str, str]] = {}
-    with path.open(newline="", encoding="utf-8") as fh:
-        for row in csv.DictReader(fh):
-            rid = row.get("rollup_key") or ""
-            if rid:
-                out[rid] = row
+#: Title prefixes that mean "this row is sandbox/junk content the CMS
+#: surfaced by accident." Currently just liveblog drafts saved with the
+#: theme placeholder title.
+_JUNK_LIVEBLOG_TITLES: frozenset[str] = frozenset({"headline"})
+
+#: Slug suffixes (after the last `/`) that mark a project URL as an
+#: embed/promo shim rather than an editorial dashboard. These pages are
+#: thin HTML fragments rendered as network embeds elsewhere; they have
+#: no standalone reader value and surface with junk titles like
+#: "Abc Embed" / "Promo".
+_JUNK_PROJECT_SLUG_SUFFIXES: tuple[str, ...] = (
+    "abc-embed.html",
+    "abc-promo.html",
+    "promo.html",
+    "abc-embed",
+    "abc-promo",
+)
+
+
+def _is_junk_record(record: SiteRecord) -> bool:
+    """Drop sandbox/draft content the CMS exposed by accident.
+
+    The "Headline" placeholder is WordPress's default liveblog title — any
+    liveblog that still has it never received a real title and is almost
+    certainly a test post the CMS admin saved as live. Project-embed
+    shim URLs (abc-embed.html, promo.html) are similar — fragments
+    rendered as network embeds elsewhere, not standalone editorial pages.
+    """
+    if record.kind == "liveblog":
+        title = (record.title or "").strip().lower()
+        if title in _JUNK_LIVEBLOG_TITLES:
+            return True
+    if record.kind == "project":
+        slug = record.id.split(":", 1)[1] if ":" in record.id else record.id
+        last_segment = slug.rsplit("/", 1)[-1].lower()
+        if last_segment in _JUNK_PROJECT_SLUG_SUFFIXES:
+            return True
+    return False
+
+
+#: Slug suffix WordPress added to draft/revision URLs, e.g.
+#: `dow-rebounds_19`. The clean sibling is always preferred when present.
+_REVISION_SLUG_SUFFIX = re.compile(r"_\d+$")
+
+
+#: Kinds eligible for cross-publish dedup at the site_data step. Article
+#: and video are the same FT segment under two URLs (`/features/<slug>`
+#: and `/videos/<slug>`) — the article version wins because it carries
+#: the full text plus an embed. Project / methodology / podcast / liveblog
+#: stay out: project drilldowns sharing a generic title aren't dupes, and
+#: the methodology + article pair (4 cases) covers genuinely different
+#: content even when slugs match.
+_DEDUPE_KINDS: frozenset[str] = frozenset({"article", "video"})
+
+
+def _dedupe_articles(records: list[SiteRecord]) -> list[SiteRecord]:
+    """Collapse rows that share title+date.
+
+    Same-article slug variants: WordPress draft revisions, truncated slugs
+    from the early CMS, and editor typo-fixes that left both URLs live.
+    Cross-publish: FiveThirtyEight republished hundreds of segments as
+    both /features/<slug> (article) and /videos/<slug> (video); the
+    article carries the writeup + embedded player, so it wins. Kinds not
+    in :data:`_DEDUPE_KINDS` are passed through unchanged.
+
+    The key intentionally drops byline so a bylineless row collapses
+    with its bylined sibling (the enricher occasionally missed the
+    author span on one snapshot but not on another for the same post).
+    When two rows in a title+date bucket have *different* non-empty
+    bylines, they stay separate — different reporters covering the
+    same headline on the same day is plausible enough to preserve.
+    """
+    groups: dict[tuple[str, str], list[SiteRecord]] = {}
+    out: list[SiteRecord] = []
+    for r in records:
+        if r.kind not in _DEDUPE_KINDS or not r.title or not r.date:
+            out.append(r)
+            continue
+        key = (_dedup_title_key(r.title), r.date[:10])
+        groups.setdefault(key, []).append(r)
+    for group in groups.values():
+        if len(group) == 1:
+            out.append(group[0])
+            continue
+        # If every non-empty byline in the bucket agrees (or only one row
+        # carries a byline at all), it's the same article — collapse.
+        non_empty = {r.byline.strip().lower() for r in group if r.byline.strip()}
+        if len(non_empty) <= 1:
+            out.append(max(group, key=_canonical_score))
+            continue
+        # WP-era + modern-features pair with conflicting bylines: the
+        # modern republish frequently inherits a backfilled byline that
+        # doesn't match the original publish date (e.g. Neil Paine
+        # attributed to a 2009 post, even though he joined in 2014).
+        # Trust the WP-era byline — it came from the contemporaneous
+        # HTML — and keep the higher-canonical-score row otherwise.
+        wp_rows = [r for r in group if r.id.startswith("article:wp/")]
+        non_wp_rows = [r for r in group if not r.id.startswith("article:wp/")]
+        if wp_rows and non_wp_rows:
+            wp_survivor = max(wp_rows, key=_canonical_score)
+            survivor = max(group, key=_canonical_score)
+            out.append(
+                SiteRecord(
+                    id=survivor.id,
+                    title=survivor.title,
+                    byline=wp_survivor.byline,
+                    authors=list(wp_survivor.authors),
+                    year=survivor.year,
+                    date=survivor.date,
+                    kind=survivor.kind,
+                    url=survivor.url,
+                )
+            )
+            continue
+        # Multiple distinct authors share title+date and no WP-era hint —
+        # keep one best row per byline so we don't conflate unrelated posts.
+        by_b: dict[str, list[SiteRecord]] = {}
+        for r in group:
+            by_b.setdefault(r.byline.strip().lower(), []).append(r)
+        for sub in by_b.values():
+            out.append(max(sub, key=_canonical_score))
     return out
+
+
+#: Smart-quote / curly-punctuation characters that snuck into titles via
+#: different CMS templates. Normalize when computing the dedup key so a
+#: curly-apostrophe title matches its straight-quote sibling.
+_TITLE_QUOTE_NORMALIZE = str.maketrans(
+    {
+        "‘": "'",  # left single quote
+        "’": "'",  # right single quote
+        "“": '"',  # left double quote
+        "”": '"',  # right double quote
+        "–": "-",  # en dash
+        "—": "-",  # em dash
+    }
+)
+
+
+def _dedup_title_key(title: str) -> str:
+    """Normalize a title for dedup-key purposes.
+
+    Lowercase, strip, and fold smart quotes / dashes down to ASCII so
+    typographic variants of the same string collide. The display title
+    on the record is left untouched.
+    """
+    return title.strip().translate(_TITLE_QUOTE_NORMALIZE).lower()
+
+
+def _disambiguate_project_drilldown_titles(records: list[SiteRecord]) -> None:
+    """Append a slug-derived suffix to project drilldown titles that collide.
+
+    Some project dashboards (e.g. congress-trump-score, carmelo) shipped
+    hundreds of per-entity drilldown URLs that all carry the same
+    page-level ``<title>``: "Tracking Congress In The Age Of Trump" for
+    every congressmember, "FiveThirtyEight's CARMELO NBA Projections"
+    for every NBA player. The polls drilldowns already disambiguate
+    themselves via the snapshot HTML title, so we only append a suffix
+    when sibling rows actually share a title.
+
+    Mutates ``records`` in place.
+    """
+    from collections import Counter
+
+    title_counts: Counter[str] = Counter(
+        r.title for r in records if r.kind == "project" and r.title
+    )
+    for r in records:
+        if r.kind != "project" or not r.title:
+            continue
+        if title_counts[r.title] < 2:
+            continue
+        suffix = _drilldown_suffix(r.id)
+        if suffix and suffix.lower() not in r.title.lower():
+            r.title = f"{r.title} — {suffix}"
+
+
+def _drilldown_suffix(rollup_key: str) -> str:
+    """Prettify the sub-path of a project rollup key.
+
+    ``project:congress-trump-score/a-donald-mceachin`` → ``A Donald Mceachin``
+    ``project:carmelo/lebron-james``                  → ``Lebron James``
+    ``project:2018-midterm-election-forecast/house/al/1`` → ``House Al 1``
+    """
+    if ":" not in rollup_key:
+        return ""
+    slug = rollup_key.split(":", 1)[1]
+    if "/" not in slug:
+        return ""
+    # Drop the project root; everything after is the drilldown identity.
+    sub = slug.split("/", 1)[1]
+    parts = [p.replace("-", " ").strip() for p in sub.split("/") if p]
+    return " ".join(p.title() for p in parts if p)
+
+
+def _canonical_score(record: SiteRecord) -> tuple[int, int, int, int, str]:
+    """Sort key for picking the canonical row out of a dedup group.
+
+    Higher tuples win. Priority order:
+    1. Article kind beats video (richer text content, /features/ URL).
+    2. A non-empty byline beats an empty one (more complete metadata).
+    3. Avoid the `_N` WordPress revision suffix.
+    4. Prefer the longer slug (a truncated variant of the same article
+       loses to its full sibling).
+    5. Alphabetical id as a stable tie-break.
+    """
+    slug = record.id.split(":", 1)[1] if ":" in record.id else record.id
+    is_article = 1 if record.kind == "article" else 0
+    has_byline = 1 if record.byline.strip() else 0
+    not_revision = 0 if _REVISION_SLUG_SUFFIX.search(slug) else 1
+    return (is_article, has_byline, not_revision, len(slug), slug)
 
 
 def _build_record(
@@ -217,6 +467,20 @@ def _build_record(
         curated_row.get("first_seen_ts") or curated_row.get("last_seen_ts") or ""
     )
     wayback_url = _build_wayback_url(earliest_ts, url) if earliest_ts else ""
+    # Sitemap/feed-source rows don't carry a CDX timestamp through merge,
+    # so the curated row's first_seen_ts is empty. Fall back to the
+    # snapshot the enricher (or feed walker) recorded — for HTML pages
+    # (NYT etc.) Wayback reliably has a snapshot, so wrapping is the
+    # right move. Podcast audio is a special case: Wayback rarely caches
+    # mp3 bodies, so the wrapped URL would just resolve to a "no snapshot"
+    # page even though we minted a fake timestamp from the feed memento.
+    # The Megaphone CDN is still serving the audio live, so we keep the
+    # bare host URL for podcasts and let users click straight to play.
+    if not wayback_url and enrich_row and kind != "podcast":
+        wayback_url = _build_wayback_url(
+            enrich_row.get("snapshot_timestamp") or "",
+            enrich_row.get("url") or url,
+        )
 
     if enrich_row:
         # Re-clean titles to apply any extractor improvements that landed
@@ -239,8 +503,16 @@ def _build_record(
     # and the CSV alike. If no real authors survive the scrub, blank the
     # display byline too.
     byline = _join_authors(authors)
-    year = _year_from_date(date)
+    year = _year_from_date(date) or _year_from_url(url)
 
+    # Sitemap-only rows we never enriched fall through with no Wayback
+    # wrapper at all. Use the no-timestamp Wayback form — the server 302s
+    # to the closest snapshot — so every URL on the site routes through
+    # archive.org rather than a (likely dead) live origin. Skip for
+    # podcasts: Wayback rarely caches mp3 bodies, and the Megaphone CDN
+    # is still serving the audio live.
+    if not wayback_url and url and kind != "podcast":
+        wayback_url = f"https://web.archive.org/web/{url}"
     final_url = wayback_url or url
     if not final_url:
         return None
@@ -280,7 +552,11 @@ def _split_authors(byline: str) -> list[str]:
     """
     if not byline.strip():
         return []
-    cleaned = _BYLINE_ROLE_PREFIX.sub("", byline.strip(), count=1)
+    s = byline.strip()
+    m = _BLOGGER_EMAIL_AUTHOR.match(s)
+    if m:
+        s = m.group(1).strip()
+    cleaned = _BYLINE_ROLE_PREFIX.sub("", s, count=1)
     parts = _BYLINE_SPLIT.split(cleaned)
     out: list[str] = []
     seen: set[str] = set()
@@ -290,6 +566,14 @@ def _split_authors(byline: str) -> list[str]:
             continue
         if name.isdigit():  # e.g. extractor picked up a year "2017" as the author
             continue
+        lower = name.lower()
+        if any(lower.startswith(p) for p in _NON_PERSON_BYLINE_PREFIXES):
+            continue
+        # NYT-era atom feeds rendered bylines in all caps (KEVIN QUEALY,
+        # MICAH COHEN, etc.). Title-case any all-uppercase multi-word name
+        # so the byline-page slug and the dedup key match the normal form.
+        if " " in name and name == name.upper():
+            name = name.title()
         # Normalize typos / CMS handles to the canonical display form.
         name = _BYLINE_ALIASES.get(name.casefold(), name)
         key = name.casefold()
@@ -309,6 +593,36 @@ def _year_from_date(date: str) -> int | None:
     if head.isdigit():
         return int(head)
     return None
+
+
+#: 538-era plausible publication years. Used to filter spurious 4-digit
+#: matches in URLs (e.g. zip codes, sample sizes, ticket IDs).
+_URL_YEAR = re.compile(r"(?<!\d)(20[0-2]\d)(?!\d)")
+
+
+def _year_from_url(url: str) -> int | None:
+    """Fallback year derivation for SPA/no-metadata pages.
+
+    Many project URLs encode the cycle year (``/election-2016/``,
+    ``/2024-election-forecast/``); use that when we have nothing better.
+    Only emit years between 2008 (site launch) and the current decade so
+    we don't pick up incidental 4-digit substrings.
+    """
+    if not url:
+        return None
+    from urllib.parse import urlsplit
+
+    path = urlsplit(url).path or ""
+    matches = _URL_YEAR.findall(path)
+    if not matches:
+        return None
+    # Prefer the *latest* plausible year in the path — projects with
+    # multi-cycle slugs like ``/2024-election-forecast/`` should bucket
+    # by the active cycle, not by a historical reference.
+    candidates = [int(m) for m in matches if 2008 <= int(m) <= 2029]
+    if not candidates:
+        return None
+    return max(candidates)
 
 
 def _title_from_url(url: str) -> str:
@@ -353,10 +667,15 @@ def iter_byline_slugs(records: Iterable[SiteRecord]) -> dict[str, list[str]]:
 def _write_sitemap(records: list[SiteRecord], out_path: Path = SITEMAP_FILE) -> None:
     """Emit a flat sitemap.xml listing every prerendered route."""
     years: set[int] = set()
+    year_months: set[str] = set()  # "YYYY-MM" buckets with at least one entry
     bylines: set[str] = set()
     for r in records:
         if r.year is not None:
             years.add(r.year)
+        if r.date and len(r.date) >= 7 and r.date[4] == "-":
+            ym = r.date[:7]
+            if ym[:4].isdigit() and ym[5:].isdigit():
+                year_months.add(ym)
         for name in r.authors:
             slug = slugify(name)
             if slug:
@@ -364,6 +683,9 @@ def _write_sitemap(records: list[SiteRecord], out_path: Path = SITEMAP_FILE) -> 
 
     urls: list[str] = [f"{SITE_BASE_URL}/", f"{SITE_BASE_URL}/byline/"]
     urls.extend(f"{SITE_BASE_URL}/year/{y}/" for y in sorted(years))
+    urls.extend(
+        f"{SITE_BASE_URL}/year/{ym[:4]}/{ym[5:]}/" for ym in sorted(year_months)
+    )
     urls.extend(f"{SITE_BASE_URL}/byline/{slug}/" for slug in sorted(bylines))
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
