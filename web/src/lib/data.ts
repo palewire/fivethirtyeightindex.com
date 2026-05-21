@@ -8,7 +8,7 @@
  *   - Node at build time (svelte-kit prerender entries generators):
  *     read it directly from disk.
  */
-import type { Entry } from './types';
+import type { Dataset, Entry } from './types';
 import { base } from '$app/paths';
 import { browser } from '$app/environment';
 
@@ -21,6 +21,13 @@ export interface DataCache {
 }
 
 let cache: DataCache | null = null;
+
+export interface DatasetCache {
+	all: Dataset[];
+	bySlug: Map<string, Dataset>;
+}
+
+let datasetCache: DatasetCache | null = null;
 
 const DIACRITICS = /[̀-ͯ]/g;
 
@@ -48,6 +55,22 @@ async function readEntriesFromDisk(): Promise<Entry[]> {
 	// At build time SvelteKit's CWD is the `web/` folder, so the data file
 	// lives at static/data/articles.json relative to there.
 	const path = resolve(process.cwd(), 'static/data/articles.json');
+	const text = await readFile(path, 'utf8');
+	return JSON.parse(text);
+}
+
+async function fetchDatasets(fetcher: typeof fetch): Promise<Dataset[]> {
+	const resp = await fetcher(`${base}/data/datasets.json`);
+	if (!resp.ok) throw new Error(`failed to load datasets.json: ${resp.status}`);
+	return resp.json();
+}
+
+async function readDatasetsFromDisk(): Promise<Dataset[]> {
+	const [{ readFile }, { resolve }] = await Promise.all([
+		import('node:fs/promises'),
+		import('node:path')
+	]);
+	const path = resolve(process.cwd(), 'static/data/datasets.json');
 	const text = await readFile(path, 'utf8');
 	return JSON.parse(text);
 }
@@ -90,4 +113,17 @@ export async function loadEntries(fetcher?: typeof fetch): Promise<DataCache> {
 
 	cache = { all, byId, byYear, byBylineSlug, years };
 	return cache;
+}
+
+export async function loadDatasets(fetcher?: typeof fetch): Promise<DatasetCache> {
+	if (datasetCache) return datasetCache;
+
+	const all = browser && fetcher ? await fetchDatasets(fetcher) : await readDatasetsFromDisk();
+	const bySlug = new Map<string, Dataset>();
+	for (const dataset of all) {
+		bySlug.set(dataset.slug, dataset);
+	}
+
+	datasetCache = { all, bySlug };
+	return datasetCache;
 }

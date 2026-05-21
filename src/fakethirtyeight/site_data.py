@@ -28,9 +28,12 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
+from fakethirtyeight.classify import KIND_PODCAST, classify
 from fakethirtyeight.curate import CURATED_FILE
+from fakethirtyeight.datasets import write_site_datasets
 from fakethirtyeight.enrich import ENRICHED_FILE
 from fakethirtyeight.metadata import _clean_title
+from fakethirtyeight.paths import DATA_DIR
 
 log = logging.getLogger(__name__)
 
@@ -39,6 +42,9 @@ SITE_CSV_FILE = Path("web/static/data/articles.csv")
 SITE_META_FILE = Path("web/static/data/articles-meta.json")
 SITEMAP_FILE = Path("web/static/sitemap.xml")
 SITE_BASE_URL = "https://fivethirtyeightindex.com"
+PODCAST_METADATA_FILE = DATA_DIR / "podcast_metadata.csv"
+PODCAST_UPLOAD_LOG = DATA_DIR / "podcast_upload_log.csv"
+ARCHIVE_ITEM_BASE_URL = "https://archive.org/details"
 
 # Capture "Nate Silver and Harry Enten", "A, B, and C", "A / B", "A | B".
 # Slash and pipe forms appear in network-attribution bylines
@@ -133,6 +139,7 @@ def build(
         raise FileNotFoundError(msg)
 
     enriched_by_id = _load_enriched(enriched_path)
+    podcast_item_urls = _load_podcast_item_urls()
     records: list[SiteRecord] = []
 
     with curated_path.open(newline="", encoding="utf-8") as fh:
@@ -145,6 +152,8 @@ def build(
             record = _build_record(row, enrich)
             if record is None:
                 continue
+            if record.kind == KIND_PODCAST and record.id in podcast_item_urls:
+                record.url = podcast_item_urls[record.id]
             records.append(record)
 
     # Sort: oldest first. This is a retrospective archive — chronological
@@ -183,8 +192,13 @@ def build(
     with meta_out_path.open("w", encoding="utf-8") as fh:
         json.dump({"total": len(records)}, fh)
 
+    # Keep dataset artifacts separate from articles, but refresh their site
+    # JSON/CSV when the source inventory exists so sitemap prerendering sees
+    # the current dataset route list.
+    write_site_datasets()
+
     # Sitemap covers every prerendered route — homepage, byline index,
-    # one entry per year, one entry per byline slug.
+    # dataset index, one entry per year, and one entry per byline slug.
     _write_sitemap(records)
 
     log.info("wrote %d records to %s and %s", len(records), out_path, csv_out_path)
@@ -199,6 +213,64 @@ def _load_enriched(path: Path) -> dict[str, dict[str, str]]:
             if rid:
                 out[rid] = row
     return out
+
+
+def _load_podcast_item_urls(
+    *,
+    metadata_path: Path = PODCAST_METADATA_FILE,
+    upload_log_path: Path = PODCAST_UPLOAD_LOG,
+) -> dict[str, str]:
+    """Map podcast rollup keys to archive.org item URLs.
+
+    The upload log is append-only. Only identifiers with a successful
+    ``uploaded`` row count; ``dry_run``, ``skipped_missing``, and ``error`` rows
+    never affect the public site. Missing files are normal before the IA
+    collection is ready, so site-data builds remain unchanged until uploads
+    actually happen.
+    """
+    if not metadata_path.exists() or not upload_log_path.exists():
+        return {}
+
+    uploaded = _load_uploaded_podcast_identifiers(upload_log_path)
+    if not uploaded:
+        return {}
+
+    out: dict[str, str] = {}
+    with metadata_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            identifier = row.get("identifier") or ""
+            if identifier not in uploaded:
+                continue
+            rollup_key = _podcast_rollup_key(row)
+            if not rollup_key:
+                continue
+            out[rollup_key] = f"{ARCHIVE_ITEM_BASE_URL}/{identifier}"
+    return out
+
+
+def _load_uploaded_podcast_identifiers(upload_log_path: Path) -> set[str]:
+    """Return IA identifiers whose upload log has a successful upload row."""
+    out: set[str] = set()
+    with upload_log_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            if (row.get("status") or "") != "uploaded":
+                continue
+            identifier = row.get("identifier") or ""
+            if identifier:
+                out.add(identifier)
+    return out
+
+
+def _podcast_rollup_key(row: dict[str, str]) -> str:
+    """Resolve a podcast metadata row to the site-data rollup key."""
+    megaphone_id = (row.get("megaphone_id") or "").upper()
+    if megaphone_id:
+        return f"podcast:meg/{megaphone_id}"
+
+    c = classify(row.get("mp3_url") or "")
+    if c.kind == KIND_PODCAST:
+        return c.rollup_key
+    return ""
 
 
 def _build_record(
@@ -257,6 +329,20 @@ def _build_record(
     )
 
 
+def clean_byline(byline: str) -> str:
+    """Return a normalized display byline.
+
+    Strips role prefixes (``-- ``, ``— ``, ``Edited by ``, ``By ``, …),
+    splits multi-author credits, filters non-person attributions
+    (FiveThirtyEight, ABC News, …), applies the typo/handle alias
+    table, and rejoins with English-style ``and`` separators.
+
+    Used both by the website JSON builder and by downstream consumers
+    (e.g. ``ia_image_upload``) that need the same canonical form.
+    """
+    return _join_authors(_split_authors(byline))
+
+
 def _join_authors(authors: list[str]) -> str:
     """Render a clean display byline from a cleaned author list."""
     if not authors:
@@ -285,7 +371,11 @@ def _split_authors(byline: str) -> list[str]:
     out: list[str] = []
     seen: set[str] = set()
     for raw in parts:
-        name = raw.strip().strip(".,;")
+        # Re-apply the role-prefix strip per-split so an interior credit
+        # like "Trevor Martin and -- Foo Bar" loses the dashes on both
+        # halves, not just the leading one.
+        name = _BYLINE_ROLE_PREFIX.sub("", raw.strip(), count=1)
+        name = name.strip().strip(".,;")
         if not name:
             continue
         if name.isdigit():  # e.g. extractor picked up a year "2017" as the author
@@ -362,7 +452,11 @@ def _write_sitemap(records: list[SiteRecord], out_path: Path = SITEMAP_FILE) -> 
             if slug:
                 bylines.add(slug)
 
-    urls: list[str] = [f"{SITE_BASE_URL}/", f"{SITE_BASE_URL}/byline/"]
+    urls: list[str] = [
+        f"{SITE_BASE_URL}/",
+        f"{SITE_BASE_URL}/byline/",
+        f"{SITE_BASE_URL}/dataset/",
+    ]
     urls.extend(f"{SITE_BASE_URL}/year/{y}/" for y in sorted(years))
     urls.extend(f"{SITE_BASE_URL}/byline/{slug}/" for slug in sorted(bylines))
 

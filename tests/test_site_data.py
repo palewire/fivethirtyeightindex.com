@@ -2,9 +2,17 @@
 
 from __future__ import annotations
 
+import csv
+from pathlib import Path
+
 import pytest
 
-from fakethirtyeight.site_data import _split_authors, _title_from_url, slugify
+from fakethirtyeight.site_data import (
+    _load_podcast_item_urls,
+    _split_authors,
+    _title_from_url,
+    slugify,
+)
 
 
 @pytest.mark.parametrize(
@@ -88,7 +96,72 @@ def test_title_from_url_falls_back_cleanly():
         _title_from_url(
             "http://www.fivethirtyeight.com/2008/05/whats-wrong-with-battleground.html"
         )
-        == "Whats Wrong With Battleground"
+        == "Wha"
+        "ts Wrong With Battleground"
     )
     assert _title_from_url("") == ""
     assert _title_from_url("https://fivethirtyeight.com/") == ""
+
+
+def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
+    with path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def test_load_podcast_item_urls_maps_only_uploaded_rows(tmp_path: Path) -> None:
+    metadata = tmp_path / "podcast_metadata.csv"
+    upload_log = tmp_path / "podcast_upload_log.csv"
+    _write_csv(
+        metadata,
+        [
+            {
+                "mp3_url": "https://traffic.megaphone.fm/ESP1234567890.mp3",
+                "identifier": "fivethirtyeight-politics-esp1234567890",
+                "megaphone_id": "ESP1234567890",
+            },
+            {
+                "mp3_url": "https://traffic.megaphone.fm/ESP1234567891.mp3",
+                "identifier": "fivethirtyeight-politics-esp1234567891",
+                "megaphone_id": "ESP1234567891",
+            },
+        ],
+    )
+    _write_csv(
+        upload_log,
+        [
+            {
+                "identifier": "fivethirtyeight-politics-esp1234567890",
+                "uploaded_at": "2026-05-21T00:00:00+00:00",
+                "status": "uploaded",
+                "files": "episode.mp3",
+                "error": "",
+            },
+            {
+                "identifier": "fivethirtyeight-politics-esp1234567891",
+                "uploaded_at": "2026-05-21T00:00:00+00:00",
+                "status": "dry_run",
+                "files": "episode.mp3",
+                "error": "",
+            },
+        ],
+    )
+
+    assert _load_podcast_item_urls(
+        metadata_path=metadata, upload_log_path=upload_log
+    ) == {
+        "podcast:meg/ESP1234567890": (
+            "https://archive.org/details/fivethirtyeight-politics-esp1234567890"
+        )
+    }
+
+
+def test_load_podcast_item_urls_missing_files_returns_empty(tmp_path: Path) -> None:
+    assert (
+        _load_podcast_item_urls(
+            metadata_path=tmp_path / "missing-metadata.csv",
+            upload_log_path=tmp_path / "missing-log.csv",
+        )
+        == {}
+    )

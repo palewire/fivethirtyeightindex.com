@@ -8,12 +8,21 @@ from pathlib import Path
 import click
 
 from fakethirtyeight import __version__
+from fakethirtyeight import articles as articles_mod
+from fakethirtyeight import caption as caption_mod
 from fakethirtyeight import crawl as crawl_mod
 from fakethirtyeight import curate as curate_mod
+from fakethirtyeight import datasets as datasets_mod
+from fakethirtyeight import download_podcasts as download_podcasts_mod
 from fakethirtyeight import duplicates as duplicates_mod
 from fakethirtyeight import enrich as enrich_mod
 from fakethirtyeight import export as export_mod
+from fakethirtyeight import ia_image_upload as ia_image_upload_mod
+from fakethirtyeight import ia_upload as ia_upload_mod
+from fakethirtyeight import images as images_mod
 from fakethirtyeight import merge as merge_mod
+from fakethirtyeight import podcast_metadata as podcast_metadata_mod
+from fakethirtyeight import save_now as save_now_mod
 from fakethirtyeight import site_data as site_data_mod
 from fakethirtyeight import sitemaps as sitemaps_mod
 from fakethirtyeight import stats as stats_mod
@@ -131,6 +140,112 @@ def build_site_data() -> None:
     click.echo(f"wrote {n:,} records to {site_data_mod.SITE_DATA_FILE}")
 
 
+@cli.command("datasets")
+@click.option(
+    "--github-dates/--no-github-dates",
+    default=False,
+    help="Fetch first-commit dates from GitHub for dataset sources.",
+)
+def datasets(github_dates: bool) -> None:
+    """Fetch FiveThirtyEight's dataset catalog and build site dataset files."""
+    n = datasets_mod.scrape_index(include_commit_dates=github_dates)
+    click.echo(
+        f"wrote {n:,} datasets to {datasets_mod.DATASETS_FILE} "
+        f"and {datasets_mod.SITE_DATASETS_FILE}"
+    )
+
+
+@cli.command("download-datasets")
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many dataset bundles to download (smoke testing).",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Re-download bundles already marked downloaded in the log.",
+)
+def download_datasets(limit: int | None, force: bool) -> None:
+    """Download one local bundle of source files for each dataset."""
+    downloaded, skipped, failed = datasets_mod.download_bundles(
+        limit=limit,
+        force=force,
+    )
+    click.echo(
+        f"downloaded: {downloaded:,}\nskipped:    {skipped:,}\nfailed:     {failed:,}\n"
+        f"\nfiles: {datasets_mod.DATASET_BUNDLES_DIR}\n"
+        f"log:   {datasets_mod.DATASET_DOWNLOAD_LOG}"
+    )
+
+
+@cli.command("upload-datasets")
+@click.option(
+    "--collection",
+    default=datasets_mod.DEFAULT_COLLECTION,
+    show_default=True,
+    help="archive.org collection slug to upload into.",
+)
+@click.option(
+    "--contributor",
+    default=datasets_mod.DEFAULT_CONTRIBUTOR,
+    show_default=True,
+    help="Person archiving these items (sets the `contributor` field).",
+)
+@click.option(
+    "--delay",
+    type=float,
+    default=1.0,
+    show_default=True,
+    help="Seconds to sleep between item uploads.",
+)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many items to upload (smoke testing).",
+)
+@click.option(
+    "--dry-run/--no-dry-run",
+    default=False,
+    help="Log what would happen without hitting archive.org.",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Re-upload items even if the upload log already marks them uploaded.",
+)
+@click.option(
+    "--path-sensitive-only",
+    is_flag=True,
+    help="Only upload bundles with nested files or duplicate basenames.",
+)
+def upload_datasets(
+    collection: str,
+    contributor: str,
+    delay: float,
+    limit: int | None,
+    dry_run: bool,
+    force: bool,
+    path_sensitive_only: bool,
+) -> None:
+    """Upload each downloaded dataset bundle to archive.org as one item."""
+    uploaded, skipped, failed = datasets_mod.upload_bundles(
+        collection=collection,
+        contributor=contributor,
+        delay=delay,
+        limit=limit,
+        dry_run=dry_run,
+        force=force,
+        path_sensitive_only=path_sensitive_only,
+    )
+    click.echo(
+        f"uploaded: {uploaded:,}\nskipped:  {skipped:,}\nfailed:   {failed:,}\n"
+        f"\nlog: {datasets_mod.DATASET_UPLOAD_LOG}"
+    )
+
+
 @cli.command()
 @click.option("--workers", type=int, default=4, show_default=True)
 @click.option(
@@ -150,6 +265,310 @@ def enrich(workers: int, delay: float, limit: int | None) -> None:
     """Fetch each curated URL's snapshot and extract title/byline/published_at."""
     n = enrich_mod.enrich(workers=workers, delay=delay, limit=limit)
     click.echo(f"enriched {n:,} rows → {enrich_mod.ENRICHED_FILE}")
+
+
+@cli.command("download-articles")
+@click.option("--workers", type=int, default=4, show_default=True)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many to download (smoke testing).",
+)
+def download_articles(workers: int, limit: int | None) -> None:
+    """Stream every curated article's Wayback snapshot HTML to disk.
+
+    Reads data/enriched.csv, fetches each row's `wayback_url` (the raw
+    id_ snapshot — no Wayback chrome), and writes gzipped HTML to
+    data/articles/<year>/<hash>.html.gz. Resumable via
+    data/article_download_log.csv.
+    """
+    ok, skipped, failed = articles_mod.download_articles(workers=workers, limit=limit)
+    click.echo(
+        f"downloaded:        {ok:,}\n"
+        f"skipped (on disk): {skipped:,}\n"
+        f"failed:            {failed:,}\n"
+        f"\nfiles: {articles_mod.ARTICLES_DIR}\n"
+        f"log:   {articles_mod.DOWNLOAD_LOG}"
+    )
+
+
+@cli.command("extract-images")
+def extract_images() -> None:
+    """Walk downloaded articles and write image references CSV.
+
+    Reads data/articles/**/*.html.gz, parses each, emits one row per
+    <img> / <picture><source> reference to data/image_references.csv.
+    Drops ad pixels, tracking beacons, and theme UI chrome.
+    """
+    n = images_mod.extract_references()
+    click.echo(f"wrote {n:,} image references to {images_mod.IMAGE_REFS_FILE}")
+
+
+@cli.command("download-images")
+@click.option("--workers", type=int, default=8, show_default=True)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many images to fetch (smoke testing).",
+)
+def download_images_cli(workers: int, limit: int | None) -> None:
+    """Stream every referenced image to disk (live first, Wayback fallback).
+
+    Reads data/image_references.csv (run `extract-images` first),
+    deduplicates by canonical URL, and saves to
+    data/images/<aa>/<sha1>.<ext>. Resumable via
+    data/image_download_log.csv.
+    """
+    ok, skipped, failed = images_mod.download_images(workers=workers, limit=limit)
+    click.echo(
+        f"downloaded: {ok:,}\nskipped:    {skipped:,}\nfailed:     {failed:,}\n"
+        f"\nfiles: {images_mod.IMAGES_DIR}\nlog:   {images_mod.IMAGE_LOG}"
+    )
+
+
+@cli.command("caption-images")
+@click.option("--workers", type=int, default=4, show_default=True)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many to caption (smoke testing).",
+)
+@click.option(
+    "--all/--screenshots-only",
+    "do_all",
+    default=False,
+    show_default=True,
+    help="Caption every downloaded image (instead of only screenshots).",
+)
+@click.option(
+    "--model",
+    default=caption_mod.DEFAULT_MODEL,
+    show_default=True,
+    help="Claude model to use for classification.",
+)
+def caption_images(workers: int, limit: int | None, do_all: bool, model: str) -> None:
+    """Use Claude vision to classify ambiguous images.
+
+    For each target image, asks Claude to return a content category,
+    description, and suggested title. Results land in
+    data/image_captions.csv and are consumed by `upload-images` to
+    decide which screenshots count as in-scope data viz.
+
+    Requires ANTHROPIC_API_KEY.
+    """
+    ok, failed = caption_mod.caption_images(
+        workers=workers,
+        limit=limit,
+        only_screenshots=not do_all,
+        model=model,
+    )
+    click.echo(
+        f"captioned: {ok:,}\nfailed:    {failed:,}\n\nlog: {caption_mod.CAPTIONS_FILE}"
+    )
+
+
+@cli.command("upload-images")
+@click.option(
+    "--collection",
+    default=ia_image_upload_mod.DEFAULT_COLLECTION,
+    show_default=True,
+    help="archive.org collection slug to upload into.",
+)
+@click.option(
+    "--contributor",
+    default=ia_image_upload_mod.DEFAULT_CONTRIBUTOR,
+    show_default=True,
+    help="Person archiving these items (sets the `contributor` field).",
+)
+@click.option(
+    "--delay",
+    type=float,
+    default=0.5,
+    show_default=True,
+    help="Seconds to sleep between item uploads.",
+)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many items to upload (smoke testing).",
+)
+@click.option(
+    "--dry-run/--no-dry-run",
+    default=False,
+    help="Log what would happen without hitting archive.org.",
+)
+def upload_images(
+    collection: str,
+    contributor: str,
+    delay: float,
+    limit: int | None,
+    dry_run: bool,
+) -> None:
+    """Upload each downloaded article image to archive.org as a standalone item.
+
+    Reads data/image_download_log.csv (run `download-images` first),
+    joins data/image_references.csv + data/enriched.csv for metadata
+    (alt/caption/article title/byline/date), and uploads one IA item
+    per image. Resumable via data/image_upload_log.csv.
+
+    Items default to the curated FiveThirtyEight collection. Requires
+    IA_ACCESS_KEY + IA_SECRET_KEY.
+    """
+    uploaded, skipped, failed = ia_image_upload_mod.upload_images(
+        collection=collection,
+        contributor=contributor,
+        delay=delay,
+        limit=limit,
+        dry_run=dry_run,
+    )
+    click.echo(
+        f"uploaded: {uploaded:,}\nskipped:  {skipped:,}\nfailed:   {failed:,}\n"
+        f"\nlog: {ia_image_upload_mod.UPLOAD_LOG}"
+    )
+
+
+@cli.command("download-podcasts")
+@click.option("--workers", type=int, default=4, show_default=True)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many to download (smoke testing).",
+)
+def download_podcasts(workers: int, limit: int | None) -> None:
+    """Stream every podcast MP3 to data/podcasts/ for later upload.
+
+    Resumable via data/podcast_download_log.csv. Existing files are
+    skipped so re-running only fetches what's missing or previously
+    failed.
+    """
+    ok, failed = download_podcasts_mod.download_podcasts(workers=workers, limit=limit)
+    click.echo(
+        f"downloaded: {ok:,}\nfailed:     {failed:,}\n"
+        f"\nfiles: {download_podcasts_mod.PODCASTS_DIR}\n"
+        f"log:   {download_podcasts_mod.DOWNLOAD_LOG}"
+    )
+
+
+@cli.command("save-podcasts")
+@click.option(
+    "--delay",
+    type=float,
+    default=3.0,
+    show_default=True,
+    help="Seconds to sleep between submissions.",
+)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many URLs to submit (smoke testing).",
+)
+@click.option(
+    "--no-skip-recent",
+    is_flag=True,
+    help="Submit even if archive.org already has a capture.",
+)
+def save_podcasts(delay: float, limit: int | None, no_skip_recent: bool) -> None:
+    """Submit podcast MP3 URLs to archive.org Save Page Now.
+
+    Requires IA_ACCESS_KEY + IA_SECRET_KEY env vars
+    (https://archive.org/account/s3.php). Resumable via
+    data/podcast_archive_log.csv.
+    """
+    submitted, skipped, failed = save_now_mod.archive_podcast_mp3s(
+        delay=delay, limit=limit, skip_recent=not no_skip_recent
+    )
+    click.echo(
+        f"submitted: {submitted:,}\nskipped:   {skipped:,}\nfailed:    {failed:,}\n"
+        f"\nlog: {save_now_mod.PODCAST_LOG}"
+    )
+
+
+@cli.command("podcast-metadata")
+@click.option(
+    "--id3/--no-id3",
+    default=True,
+    show_default=True,
+    help="Run Tier 2 (ID3 tag extraction from downloaded MP3s) after Tier 1.",
+)
+def podcast_metadata(id3: bool) -> None:
+    """Build data/podcast_metadata.csv for archive.org item uploads.
+
+    Tier 1 (always): URL-derived fields — show, slug, date (when in the
+    filename), megaphone ID, archive.org identifier, embedding player URL.
+
+    Tier 2 (default on): patch in title/description/date/cover-art from
+    the ID3 tags of each downloaded MP3 in data/podcasts/.
+    """
+    n = podcast_metadata_mod.build_tier1()
+    click.echo(f"Tier 1: wrote {n:,} rows to {podcast_metadata_mod.METADATA_FILE}")
+    if id3:
+        enriched = podcast_metadata_mod.enrich_with_id3()
+        click.echo(f"Tier 2: enriched {enriched:,} rows with ID3 tags")
+
+
+@cli.command("upload-podcasts")
+@click.option(
+    "--collection",
+    default=ia_upload_mod.DEFAULT_COLLECTION,
+    show_default=True,
+    help="archive.org collection slug to upload into.",
+)
+@click.option(
+    "--delay",
+    type=float,
+    default=1.0,
+    show_default=True,
+    help="Seconds to sleep between item uploads.",
+)
+@click.option(
+    "--contributor",
+    default=ia_upload_mod.DEFAULT_CONTRIBUTOR,
+    show_default=True,
+    help="Person archiving these items (sets the `contributor` field).",
+)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many items to upload (smoke testing).",
+)
+@click.option(
+    "--dry-run/--no-dry-run",
+    default=False,
+    help="Log what would happen without hitting archive.org.",
+)
+def upload_podcasts(
+    collection: str,
+    contributor: str,
+    delay: float,
+    limit: int | None,
+    dry_run: bool,
+) -> None:
+    """Upload each podcast MP3 + cover art to archive.org as a collection item.
+
+    Reads data/podcast_metadata.csv (run `podcast-metadata` first) and
+    uploads one IA item per row. Resumable via data/podcast_upload_log.csv.
+
+    Requires IA_ACCESS_KEY + IA_SECRET_KEY and the target collection
+    to be granted to the account.
+    """
+    uploaded, skipped, failed = ia_upload_mod.upload_podcasts(
+        collection=collection,
+        contributor=contributor,
+        delay=delay,
+        limit=limit,
+        dry_run=dry_run,
+    )
+    click.echo(
+        f"uploaded: {uploaded:,}\nskipped:  {skipped:,}\nfailed:   {failed:,}\n"
+        f"\nlog: {ia_upload_mod.UPLOAD_LOG}"
+    )
 
 
 @cli.command("rescrape-bylines")

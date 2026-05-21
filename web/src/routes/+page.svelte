@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { afterNavigate } from '$app/navigation';
-	import { BylineTeaser, EntryList, SearchBox, YearList } from '$lib/components';
+	import {
+		BylineTeaser,
+		DatasetTeaser,
+		EntryList,
+		SearchBox,
+		YearList
+	} from '$lib/components';
 	import { loadEntries } from '$lib/data';
 	import { search, type SearchResult } from '$lib/search';
 	import type { Entry } from '$lib/types';
@@ -60,4 +66,5 @@
 {#if !searched}
 	<YearList years={data.years} />
 	<BylineTeaser bylines={data.topBylines} total={data.totalBylines} />
+	<DatasetTeaser datasets={data.datasets} total={data.totalDatasets} />
 {/if}
