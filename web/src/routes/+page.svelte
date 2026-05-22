@@ -4,6 +4,7 @@
 		BylineTeaser,
 		DatasetTeaser,
 		EntryList,
+		PodcastTeaser,
 		SearchBox,
 		YearList
 	} from '$lib/components';
@@ -66,5 +67,6 @@
 {#if !searched}
 	<YearList years={data.years} />
 	<BylineTeaser bylines={data.topBylines} total={data.totalBylines} />
+	<PodcastTeaser series={data.podcastSeries} total={data.totalPodcasts} />
 	<DatasetTeaser datasets={data.datasets} total={data.totalDatasets} />
 {/if}

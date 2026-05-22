@@ -7,6 +7,7 @@ tables:
 * :data:`IMAGE_LOG` — what's on disk + its content type
 * :data:`IMAGE_REFS_FILE` — which article each image was embedded in,
   with its alt text and caption
+* :data:`CAPTIONS_FILE` — optional vision labels and descriptions
 * :data:`ENRICHED_FILE` — that article's title, byline, and publish date
 
 Auth: same ``IA_ACCESS_KEY`` + ``IA_SECRET_KEY`` env vars used by the
@@ -38,7 +39,9 @@ from typing import Protocol
 
 from internetarchive import get_session
 
+from fakethirtyeight.caption import CAPTIONS_FILE, IN_SCOPE_AI_CATEGORIES
 from fakethirtyeight.enrich import ENRICHED_FILE
+from fakethirtyeight.ia_metadata import year_from_date
 from fakethirtyeight.images import (
     IMAGE_LOG,
     IMAGE_REFS_FILE,
@@ -70,6 +73,9 @@ DEFAULT_COLLECTION = "fivethirtyeight-collection"
 #: ``category`` values come from :func:`fakethirtyeight.images._categorize`.
 _CATEGORY_SUBJECTS: dict[str, tuple[str, ...]] = {
     "chart": ("chart",),
+    "map": ("map",),
+    "table": ("table",),
+    "chart-screenshot": ("chart", "screenshot"),
     "featured-image": ("featured-image",),
     "banner": ("banner",),
     "screenshot": ("screenshot",),
@@ -161,7 +167,7 @@ def _load_article_meta(
                 "alt": row.get("alt") or "",
                 "caption": row.get("caption") or "",
                 "category": row.get("category") or "chart",
-                "article_url": article.get("url") or "",
+                "article_url": row.get("article_url") or article.get("url") or "",
                 "article_title": article.get("title") or "",
                 "byline": article.get("byline") or "",
                 "published_at": article.get("published_at") or "",
@@ -176,6 +182,52 @@ def _load_article_meta(
             ):
                 out[cu] = rec
     return out
+
+
+def _load_captions(captions_path: Path) -> dict[str, dict[str, str]]:
+    """``identifier → vision metadata`` from image_captions.csv."""
+    if not captions_path.exists():
+        return {}
+    out: dict[str, dict[str, str]] = {}
+    with captions_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            ident = (row.get("identifier") or "").strip()
+            if not ident or (row.get("status") or "") != "ok":
+                continue
+            out[ident] = {
+                "ai_category": row.get("ai_category") or "",
+                "ai_description": row.get("ai_description") or "",
+                "ai_title": row.get("ai_title") or "",
+                "ai_text": row.get("ai_text") or "",
+            }
+    return out
+
+
+def _merge_caption(
+    rec: dict[str, str], caption: dict[str, str] | None
+) -> dict[str, str]:
+    """Overlay vision classification on the metadata row when present."""
+    if not caption:
+        return rec
+    out = dict(rec)
+    for key in ("ai_category", "ai_description", "ai_title", "ai_text"):
+        if caption.get(key):
+            out[key] = caption[key]
+    if out.get("ai_category"):
+        out["category"] = out["ai_category"]
+    return out
+
+
+def _in_scope_for_upload(rec: dict[str, str]) -> bool:
+    """Return True when an image belongs in the chart/map/table archive."""
+    ai_category = (rec.get("ai_category") or "").strip()
+    if ai_category:
+        return ai_category in IN_SCOPE_AI_CATEGORIES
+    category = (rec.get("category") or "").strip()
+    # Screenshots are ambiguous until the vision pass says they are a
+    # data visualization. Filename-classified charts can still upload
+    # without AI captions.
+    return category in {"chart", "map", "table", "chart-screenshot"}
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +251,7 @@ def _subjects_for(rec: dict[str, str]) -> list[str]:
 
 def _title_for(rec: dict[str, str], canonical_url: str) -> str:
     """Pick the best human-readable title for this image."""
-    for candidate in (rec.get("caption"), rec.get("alt")):
+    for candidate in (rec.get("ai_title"), rec.get("caption"), rec.get("alt")):
         candidate = (candidate or "").strip()
         if candidate and len(candidate) > 3:
             return candidate[:200]
@@ -219,9 +271,15 @@ def _description_for(rec: dict[str, str], canonical_url: str) -> str:
     X" — is more honest than crediting them with the graphic.
     """
     bits: list[str] = []
+    ai_description = (rec.get("ai_description") or "").strip()
+    if ai_description:
+        bits.append(ai_description)
     caption = (rec.get("caption") or "").strip()
-    if caption:
+    if caption and caption != ai_description:
         bits.append(caption)
+    ai_text = (rec.get("ai_text") or "").strip()
+    if ai_text:
+        bits.append(f"Text visible in image:\n{ai_text}")
     article_url = (rec.get("article_url") or "").strip()
     article_title = (rec.get("article_title") or "").strip()
     byline = clean_byline(rec.get("byline") or "")
@@ -268,6 +326,7 @@ def _metadata_for(
     if date:
         # IA accepts ISO 8601 or YYYY-MM-DD; published_at is ISO already.
         md["date"] = date
+        md["year"] = year_from_date(date)
     article_url = (rec.get("article_url") or "").strip()
     if article_url:
         md["originalurl"] = article_url
@@ -332,6 +391,13 @@ def upload_one(
             status="error",
             error=f"local file missing: {file_path}",
         )
+    if not _in_scope_for_upload(rec):
+        return UploadResult(
+            identifier=identifier,
+            canonical_url=canonical_url,
+            status="skipped",
+            error=f"out-of-scope category: {rec.get('category') or 'unknown'}",
+        )
 
     metadata = _metadata_for(
         canonical_url, rec, collection=collection, contributor=contributor
@@ -387,6 +453,7 @@ def upload_images(
     image_log_path: Path = IMAGE_LOG,
     refs_path: Path = IMAGE_REFS_FILE,
     enriched_path: Path = ENRICHED_FILE,
+    captions_path: Path = CAPTIONS_FILE,
     log_path: Path = UPLOAD_LOG,
 ) -> tuple[int, int, int]:
     """Upload every downloaded image's file + metadata to ``collection``.
@@ -414,6 +481,9 @@ def upload_images(
     log.info("loading article metadata join …")
     article_meta = _load_article_meta(refs_path, enriched_path)
     log.info("joined metadata for %d unique images", len(article_meta))
+    captions = _load_captions(captions_path)
+    if captions:
+        log.info("loaded vision captions for %d images", len(captions))
 
     done = _load_done(log_path)
     rows = list(_iter_image_rows(image_log_path))
@@ -441,7 +511,10 @@ def upload_images(
         for i, row in enumerate(pending, 1):
             canonical_url = row["canonical_url"]
             file_path = DATA_DIR.parent / row["file_path"]
-            rec = article_meta.get(canonical_url, {})
+            rec = _merge_caption(
+                article_meta.get(canonical_url, {}),
+                captions.get(identifier_for(canonical_url)),
+            )
             result = upload_one(
                 session,
                 canonical_url=canonical_url,

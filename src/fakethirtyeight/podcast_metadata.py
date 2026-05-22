@@ -18,12 +18,14 @@ file's tags.
 from __future__ import annotations
 
 import csv
+import gzip
 import hashlib
+import html
 import logging
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from bs4 import BeautifulSoup
 from mutagen.id3 import ID3, ID3NoHeaderError
@@ -36,7 +38,10 @@ log = logging.getLogger(__name__)
 
 METADATA_FILE = DATA_DIR / "podcast_metadata.csv"
 THUMBNAILS_DIR = DATA_DIR / "podcast_thumbnails"
+ENRICHED_FILE = DATA_DIR / "enriched.csv"
+ARTICLE_DOWNLOAD_LOG = DATA_DIR / "article_download_log.csv"
 FEED_DATE_PATTERN = "feed-*.csv"
+_MP3_URL = re.compile(r"https?://[^\s\"'<>]+\.mp3(?:\?[^\s\"'<>]*)?", re.I)
 
 #: Map a short URL-derived show slug to a canonical show name + a stable
 #: collection-internal identifier prefix. Order: the URL slug we'll see
@@ -178,10 +183,10 @@ def build_identifier(md: PodcastMetadata) -> str:
     parts = ["fivethirtyeight"]
     if md.show_slug:
         parts.append(md.show_slug)
-    if md.date:
-        parts.append(md.date)
-    elif md.megaphone_id:
+    if md.megaphone_id:
         parts.append(md.megaphone_id.lower())
+    elif md.date:
+        parts.append(md.date)
     return _slugify(*parts)
 
 
@@ -193,8 +198,16 @@ def _full_date(raw: str) -> str:
     return ""
 
 
+def _published_at(raw: str) -> str:
+    """Return an ISO-ish publication timestamp or date, or ``""``."""
+    raw = (raw or "").strip()
+    if not _full_date(raw):
+        return ""
+    return raw
+
+
 def _load_feed_dates(feed_paths: list[Path] | None = None) -> dict[str, str]:
-    """Megaphone episode ID → full publish date from feed walker outputs."""
+    """Megaphone episode ID → feed publish timestamp from feed walker outputs."""
     paths = (
         feed_paths
         if feed_paths is not None
@@ -206,14 +219,132 @@ def _load_feed_dates(feed_paths: list[Path] | None = None) -> dict[str, str]:
             continue
         with path.open(newline="", encoding="utf-8") as fh:
             for row in csv.DictReader(fh):
-                date = _full_date(row.get("published_at") or "")
-                if not date:
+                published_at = _published_at(row.get("published_at") or "")
+                if not published_at:
                     continue
                 m = _MEGAPHONE_FILE.match(Path(row.get("url") or "").name)
                 if not m:
                     continue
-                out[m.group("id").upper()] = date
+                out[m.group("id").upper()] = published_at
     return out
+
+
+def _normalize_title(title: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", title.lower()).strip()
+
+
+def _title_date_keys(title: str) -> set[str]:
+    normalized = _normalize_title(title)
+    keys = {normalized} if normalized else set()
+    for prefix in (
+        "emergency podcast",
+        "hot takedown",
+        "model talk",
+        "podcast 19",
+        "politics podcast",
+        "whats the point",
+    ):
+        if normalized.startswith(prefix):
+            key = normalized.removeprefix(prefix).strip()
+            if key:
+                keys.add(key)
+    return keys
+
+
+def _load_title_dates(enriched_path: Path = ENRICHED_FILE) -> dict[str, str]:
+    """Unique normalized title → publication timestamp from enriched records."""
+    if not enriched_path.exists():
+        return {}
+    candidates: dict[str, set[str]] = {}
+    with enriched_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            published_at = _published_at(row.get("published_at") or "")
+            if not published_at:
+                continue
+            for key in _title_date_keys(row.get("title") or ""):
+                candidates.setdefault(key, set()).add(published_at)
+    return {
+        key: next(iter(values))
+        for key, values in candidates.items()
+        if len(values) == 1
+    }
+
+
+def _article_key(url: str) -> str:
+    parsed = urlparse(url)
+    host = parsed.netloc.lower().removesuffix(":80").removesuffix(":443")
+    path = parsed.path.rstrip("/")
+    return f"{host}{path}".lower()
+
+
+def _load_article_dates(enriched_path: Path = ENRICHED_FILE) -> dict[str, str]:
+    if not enriched_path.exists():
+        return {}
+    candidates: dict[str, set[str]] = {}
+    with enriched_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            if row.get("kind") != "article":
+                continue
+            published_at = _published_at(row.get("published_at") or "")
+            if not published_at:
+                continue
+            key = _article_key(row.get("url") or "")
+            if key:
+                candidates.setdefault(key, set()).add(published_at)
+    return {
+        key: next(iter(values))
+        for key, values in candidates.items()
+        if len(values) == 1
+    }
+
+
+def _extract_mp3_urls(text: str) -> set[str]:
+    urls: set[str] = set()
+    for variant in {text, html.unescape(text), unquote(html.unescape(text))}:
+        for match in _MP3_URL.finditer(variant):
+            url = match.group(0)
+            src = parse_qs(urlparse(url).query).get("src", [""])[0]
+            if src and "mp3" in src.lower():
+                url = src
+            urls.add(_canonical_audio_url(url))
+    return urls
+
+
+def _megaphone_id_from_url(url: str) -> str:
+    m = _MEGAPHONE_FILE.match(Path(urlparse(url).path).name)
+    return m.group("id").upper() if m else ""
+
+
+def _load_article_context(
+    *,
+    download_log_path: Path = ARTICLE_DOWNLOAD_LOG,
+    enriched_path: Path = ENRICHED_FILE,
+) -> dict[str, tuple[str, str]]:
+    """Canonical MP3 URL → unique ``(article_url, article_published_at)``."""
+    if not download_log_path.exists():
+        return {}
+    article_dates = _load_article_dates(enriched_path)
+    candidates: dict[str, set[tuple[str, str]]] = {}
+    with download_log_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            if row.get("status") != "ok":
+                continue
+            article_url = row.get("url") or ""
+            article_date = article_dates.get(_article_key(article_url))
+            if not article_date:
+                continue
+            path = Path(row.get("file_path") or "")
+            if not path.exists():
+                continue
+            with gzip.open(path, "rt", errors="replace") as html_fh:
+                mp3_urls = _extract_mp3_urls(html_fh.read())
+            for mp3_url in mp3_urls:
+                candidates.setdefault(mp3_url, set()).add((article_url, article_date))
+    return {
+        mp3_url: next(iter(values))
+        for mp3_url, values in candidates.items()
+        if len(values) == 1
+    }
 
 
 def _url_suffix(url: str) -> str:
@@ -285,6 +416,12 @@ def build_tier1(out_path: Path = METADATA_FILE) -> int:
     mp3s = collect_podcast_mp3s()
     player_index = build_player_index()
     feed_dates = _load_feed_dates()
+    article_context = _load_article_context()
+    article_context_by_id: dict[str, set[tuple[str, str]]] = {}
+    for mp3_url, context in article_context.items():
+        megaphone_id = _megaphone_id_from_url(mp3_url)
+        if megaphone_id:
+            article_context_by_id.setdefault(megaphone_id, set()).add(context)
     rows: list[PodcastMetadata] = []
 
     for mp3 in mp3s:
@@ -305,9 +442,24 @@ def build_tier1(out_path: Path = METADATA_FILE) -> int:
         if player_index.get(mp3):
             md.player_url = player_index[mp3][0]
 
+        article_context_for_row = article_context.get(mp3)
+        if not article_context_for_row and md.megaphone_id:
+            contexts = article_context_by_id.get(md.megaphone_id.upper(), set())
+            if len(contexts) == 1:
+                article_context_for_row = next(iter(contexts))
+
+        if article_context_for_row:
+            md.source_article_url, article_date = article_context_for_row
+            md.extracted_via.append("article-context")
+        else:
+            article_date = ""
+
         if md.megaphone_id in feed_dates and not _full_date(md.date):
             md.date = feed_dates[md.megaphone_id]
             md.extracted_via.append("feed-date")
+        elif article_date and not _full_date(md.date):
+            md.date = article_date
+            md.extracted_via.append("article-date")
 
         md.identifier = build_identifier(md)
         rows.append(md)
@@ -376,12 +528,40 @@ def _extract_thumbnail(tags: ID3, identifier: str, out_dir: Path) -> tuple[str, 
         return "", ""
     # Pick the largest payload — usually the highest-res cover.
     apic = max(apics, key=lambda a: len(a.data))
-    mime = (apic.mime or "image/jpeg").lower()
+    data, mime = _normalize_cover_art(apic.data, apic.mime or "")
+    if not data:
+        return "", ""
     ext = {"image/jpeg": "jpg", "image/jpg": "jpg", "image/png": "png"}.get(mime, "jpg")
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{identifier}.{ext}"
-    out_path.write_bytes(apic.data)
+    out_path.write_bytes(data)
     return str(out_path.relative_to(DATA_DIR.parent)), mime
+
+
+def _normalize_cover_art(data: bytes, mime: str) -> tuple[bytes, str]:
+    """Return valid image bytes and MIME type, repairing reversible mojibake."""
+    detected = _image_mime(data)
+    if detected:
+        return data, detected
+    try:
+        repaired = data.decode("utf-8").encode("latin-1")
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        return b"", ""
+    detected = _image_mime(repaired)
+    if detected:
+        return repaired, detected
+    mime = mime.lower()
+    if mime in {"image/jpeg", "image/jpg", "image/png"}:
+        return data, mime
+    return b"", ""
+
+
+def _image_mime(data: bytes) -> str:
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    return ""
 
 
 def _load_tags(path: Path) -> ID3 | None:
@@ -443,6 +623,7 @@ def enrich_with_id3(
         fields = reader.fieldnames or list(PodcastMetadata.__dataclass_fields__)
         rows = list(reader)
 
+    title_dates = _load_title_dates()
     enriched = 0
     thumbs = 0
     for row in rows:
@@ -466,6 +647,18 @@ def enrich_with_id3(
             # TDRC can be a year ("2020"), full date, or timestamp.
             # IA accepts any of these.
             row["date"] = fields_from_tags["date"]
+        if not _published_at(row.get("date") or ""):
+            title_date = next(
+                (
+                    title_dates[key]
+                    for key in _title_date_keys(row.get("title") or "")
+                    if key in title_dates
+                ),
+                "",
+            )
+            if title_date:
+                row["date"] = title_date
+                via.append("title-date")
         # ID3 album field tends to be the canonical show name. If it
         # disagrees with our URL-derived guess, trust the publisher.
         if fields_from_tags.get("album"):

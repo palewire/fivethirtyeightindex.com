@@ -27,3 +27,13 @@ export interface Dataset {
 	archive_url: string;
 	date: string;
 }
+
+export interface Podcast {
+	id: string;
+	title: string;
+	date: string;
+	year: number | null;
+	series: string;
+	series_slug: string;
+	url: string;
+}
