@@ -52,6 +52,7 @@ IMAGE_LOG = DATA_DIR / "image_download_log.csv"
 REF_FIELDS = (
     "identifier",  # archive.org item identifier (deterministic from canonical_url)
     "article_file",
+    "article_url",
     "image_url",
     "canonical_url",
     "alt",
@@ -197,9 +198,10 @@ _CATEGORY_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 )
 
 #: Categories we extract but DO NOT keep. Mission scope is charts,
-#: graphs, maps, and data visualizations — illustrations, photos,
-#: decorative banners and player headshots are out.
-_DROP_CATEGORIES = frozenset(["banner", "headshot", "featured-image"])
+#: graphs, maps, and data visualizations — decorative banners and
+#: player headshots are out. Featured images stay in the candidate set
+#: because many are designed data ledes and need visual classification.
+_DROP_CATEGORIES = frozenset(["banner", "headshot"])
 
 #: Screenshots are only kept when the host article URL contains one of
 #: these path fragments. The recurring data-roundup columns
@@ -388,7 +390,7 @@ def _extract_one(
             return  # out-of-mission: banners, headshots, ledes
         # NB: we deliberately don't drop screenshots here. They get a
         # vision-based classification pass in :mod:`caption` and are
-        # filtered at upload time based on what Claude actually sees.
+        # filtered at upload time based on what the classifier sees.
         if canonical in seen_in_article:
             return
         seen_in_article.add(canonical)
@@ -396,6 +398,7 @@ def _extract_one(
             {
                 "identifier": identifier_for(canonical),
                 "article_file": article_file,
+                "article_url": article_url,
                 "image_url": url,
                 "canonical_url": canonical,
                 "alt": alt or "",
@@ -533,6 +536,44 @@ def path_for(
     return base / h[:2] / f"{h}{_extension_for(content_type, canonical_url)}"
 
 
+def _image_kind(body: bytes) -> str:
+    """Return the image format detected from file bytes, or ``""``.
+
+    HTTP content types are unreliable for this corpus: dead hosts and
+    Wayback snapshots can return branded HTML with ``200 OK`` for image
+    URLs. Sniff the magic bytes before we accept a response as an image.
+    """
+    if body.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if body.startswith(b"\xff\xd8\xff"):
+        return "jpeg"
+    if body.startswith((b"GIF87a", b"GIF89a")):
+        return "gif"
+    if body.startswith(b"RIFF") and body[8:12] == b"WEBP":
+        return "webp"
+    prefix = body.lstrip(b"\xef\xbb\xbf\r\n\t ")
+    if prefix.startswith(b"<svg") or (
+        prefix.startswith(b"<?xml") and b"<svg" in prefix[:1024]
+    ):
+        return "svg"
+    return ""
+
+
+def _is_image_body(body: bytes) -> bool:
+    return bool(_image_kind(body))
+
+
+def _logged_file_is_image(row: dict[str, str], *, root: Path = DATA_DIR.parent) -> bool:
+    path = row.get("file_path") or ""
+    if not path:
+        return False
+    p = root / path
+    if not p.exists():
+        return False
+    with p.open("rb") as fh:
+        return _is_image_body(fh.read(2048))
+
+
 @retry(
     retry=retry_if_exception_type(httpx.HTTPError),
     stop=stop_after_attempt(4),
@@ -585,8 +626,10 @@ def _try_fetch(
     where ``source`` is ``"live"`` or ``"wayback"``, or ``(None, None, error)``."""
     try:
         body, ct = _stream(client, canonical_url)
-        if body:
+        if body and _is_image_body(body):
             return body, ct, "live"
+        if body:
+            live_err = f"non-image response: {ct or 'unknown content type'}"
     except Exception as live_exc:  # noqa: BLE001
         live_err = repr(live_exc)[:160]
     else:
@@ -597,20 +640,33 @@ def _try_fetch(
         return None, None, f"live: {live_err}; no wayback capture"
     try:
         body, ct = _stream(client, wb)
-        if body:
+        if body and _is_image_body(body):
             return body, ct, "wayback"
+        if body:
+            return (
+                None,
+                None,
+                (
+                    f"live: {live_err}; wayback: non-image response: "
+                    f"{ct or 'unknown content type'}"
+                ),
+            )
         return None, None, f"live: {live_err}; wayback: empty"
     except Exception as wb_exc:  # noqa: BLE001
         return None, None, f"live: {live_err}; wayback: {repr(wb_exc)[:80]}"
 
 
-def _load_done(log_path: Path) -> set[str]:
+def _load_done(log_path: Path, *, root: Path = DATA_DIR.parent) -> set[str]:
     if not log_path.exists():
         return set()
     out: set[str] = set()
     with log_path.open(newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
-            if (row.get("status") or "") == "ok" and row.get("canonical_url"):
+            if (
+                (row.get("status") or "") == "ok"
+                and row.get("canonical_url")
+                and _logged_file_is_image(row, root=root)
+            ):
                 out.add(row["canonical_url"])
     return out
 

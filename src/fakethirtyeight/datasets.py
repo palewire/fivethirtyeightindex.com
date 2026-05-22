@@ -24,6 +24,7 @@ from internetarchive import get_session
 
 from fakethirtyeight.classify import classify
 from fakethirtyeight.http import make_client
+from fakethirtyeight.ia_metadata import year_from_date
 from fakethirtyeight.paths import DATA_DIR
 
 log = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ DATASETS_FILE = DATA_DIR / "datasets.csv"
 DATASET_BUNDLES_DIR = DATA_DIR / "dataset_bundles"
 DATASET_DOWNLOAD_LOG = DATA_DIR / "dataset_download_log.csv"
 DATASET_UPLOAD_LOG = DATA_DIR / "dataset_upload_log.csv"
+DATASET_METADATA_REPAIR_LOG = DATA_DIR / "dataset_metadata_repair_log.csv"
 DATASET_REPO_CLONES_DIR = DATA_DIR / "dataset_repo_clones"
 SITE_DATASETS_FILE = Path("web/static/data/datasets.json")
 SITE_DATASETS_CSV_FILE = Path("web/static/data/datasets.csv")
@@ -43,6 +45,7 @@ DEFAULT_CONTRIBUTOR = "Ben Welsh"
 DEFAULT_PUBLISHER = "FiveThirtyEight"
 DOWNLOAD_LOG_FIELDS = ("identifier", "downloaded_at", "status", "files", "error")
 UPLOAD_LOG_FIELDS = ("identifier", "uploaded_at", "status", "files", "error")
+METADATA_REPAIR_LOG_FIELDS = ("identifier", "repaired_at", "status", "year", "error")
 _ZIP_CACHE: dict[tuple[str, str, str], bytes] = {}
 TITLE_ACRONYMS = {
     "abc",
@@ -73,6 +76,12 @@ class _ArchiveItem(Protocol):
         verbose: bool,
         request_kwargs: dict[str, str] | None = None,
     ) -> Iterable[_UploadResponse]: ...
+
+    def modify_metadata(
+        self,
+        metadata: dict[str, str],
+        request_kwargs: dict[str, str] | None = None,
+    ) -> _UploadResponse: ...
 
 
 class _ArchiveSession(Protocol):
@@ -452,6 +461,96 @@ def upload_bundles(
     return uploaded, skipped, failed
 
 
+def repair_dataset_years(
+    *,
+    datasets_path: Path = DATASETS_FILE,
+    upload_log_path: Path = DATASET_UPLOAD_LOG,
+    repair_log_path: Path = DATASET_METADATA_REPAIR_LOG,
+    delay: float = 1.0,
+    limit: int | None = None,
+    dry_run: bool = False,
+    force: bool = False,
+) -> tuple[int, int, int]:
+    """Backfill archive.org ``year`` metadata for uploaded dataset items."""
+    records = load_datasets(datasets_path)
+    uploaded = _load_done(upload_log_path)
+    done = set() if force else _load_done(repair_log_path)
+    pending = [
+        r
+        for r in records
+        if r.identifier in uploaded
+        and r.identifier not in done
+        and year_from_date(r.date)
+    ]
+    skipped = len(records) - len(pending)
+    if limit is not None:
+        pending = pending[:limit]
+
+    session: _ArchiveSession | None = None if dry_run else _ia_session()
+    write_header = not repair_log_path.exists()
+    repaired = failed = 0
+    with repair_log_path.open("a", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=METADATA_REPAIR_LOG_FIELDS)
+        if write_header:
+            writer.writeheader()
+
+        for record in pending:
+            year = year_from_date(record.date)
+            result = repair_one_dataset_year(
+                session,
+                record,
+                year=year,
+                dry_run=dry_run,
+            )
+            writer.writerow(
+                _metadata_repair_log_row(
+                    record.identifier,
+                    status=result["status"],
+                    year=year,
+                    error=result["error"],
+                )
+            )
+            fh.flush()
+            if result["status"] == "repaired":
+                repaired += 1
+            elif result["status"] == "dry_run":
+                skipped += 1
+            else:
+                failed += 1
+            log.info("%s year=%s — %s", result["status"], year, record.identifier)
+            if delay > 0 and not dry_run:
+                time.sleep(delay)
+
+    return repaired, skipped, failed
+
+
+def repair_one_dataset_year(
+    session: _ArchiveSession | None,
+    record: DatasetRecord,
+    *,
+    year: str,
+    dry_run: bool,
+) -> dict[str, str]:
+    """Patch one uploaded dataset item's IA ``year`` metadata field."""
+    if not year:
+        return {"status": "skipped_missing", "error": "record has no year"}
+    if dry_run:
+        return {"status": "dry_run", "error": ""}
+    if session is None:
+        return {"status": "error", "error": "missing IA session"}
+
+    try:
+        item = session.get_item(record.identifier)
+        resp = item.modify_metadata(
+            {"year": year},
+            request_kwargs=_ia_request_kwargs(),
+        )
+        resp.raise_for_status()
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "error", "error": repr(exc)[:300]}
+    return {"status": "repaired", "error": ""}
+
+
 def upload_one_bundle(
     session: _ArchiveSession | None,
     record: DatasetRecord,
@@ -519,6 +618,8 @@ def metadata_for_record(
         "creator": "FiveThirtyEight",
         "contributor": contributor,
         "publisher": DEFAULT_PUBLISHER,
+        "date": record.date,
+        "year": year_from_date(record.date),
         "description": "\n\n".join(description_bits),
         "subject": ["dataset", "FiveThirtyEight", "data journalism"],
         "source": record.dataset_url,
@@ -529,7 +630,7 @@ def metadata_for_record(
         ],
         "originalurl": record.dataset_url,
     }
-    return md
+    return {k: v for k, v in md.items() if v not in ("", [], None)}
 
 
 def apply_upload_log(
@@ -927,7 +1028,7 @@ def _load_done(log_path: Path) -> set[str]:
     done: set[str] = set()
     with log_path.open(newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
-            if (row.get("status") or "") not in {"downloaded", "uploaded"}:
+            if (row.get("status") or "") not in {"downloaded", "uploaded", "repaired"}:
                 continue
             identifier = row.get("identifier") or ""
             if identifier:
@@ -949,6 +1050,22 @@ def _log_row(
         timestamp_field: datetime.now(UTC).isoformat(timespec="seconds"),
         "status": str(status),
         "files": "|".join(file_values),
+        "error": str(error),
+    }
+
+
+def _metadata_repair_log_row(
+    identifier: str,
+    *,
+    status: object,
+    year: object,
+    error: object,
+) -> dict[str, str]:
+    return {
+        "identifier": identifier,
+        "repaired_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "status": str(status),
+        "year": str(year),
         "error": str(error),
     }
 

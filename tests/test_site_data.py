@@ -8,7 +8,11 @@ from pathlib import Path
 import pytest
 
 from fakethirtyeight.site_data import (
+    _build_record,
     _load_podcast_item_urls,
+    _load_site_podcasts,
+    _lookup_enrichment,
+    _normalize_site_date,
     _split_authors,
     _title_from_url,
     _year_from_url,
@@ -172,6 +176,59 @@ def test_title_from_url_falls_back_cleanly():
     assert _title_from_url("https://fivethirtyeight.com/") == ""
 
 
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("20150502234807", "2015-05-02"),
+        ("20150502", "2015-05-02"),
+        ("201505", "2015-05"),
+        ("2015-05-02T23:48:07+00:00", "2015-05-02T23:48:07+00:00"),
+        ("", ""),
+    ],
+)
+def test_normalize_site_date(raw: str, expected: str) -> None:
+    assert _normalize_site_date(raw) == expected
+
+
+def test_build_record_normalizes_wayback_timestamp_fallback_date() -> None:
+    record = _build_record(
+        {
+            "rollup_key": "article:features/but-first-a-word-from-100-podcast-sponsors",
+            "kind": "article",
+            "url": "http://fivethirtyeight.com/features/but-first-a-word-from-100-podcast-sponsors/",
+            "first_seen_ts": "20150502234807",
+            "last_seen_ts": "20150502234807",
+        },
+        None,
+    )
+
+    assert record is not None
+    assert record.date == "2015-05-02"
+    assert record.year == 2015
+
+
+def test_lookup_enrichment_uses_current_rollup_for_stale_curated_id() -> None:
+    current_key = "article:politics-podcast-what-the-debt-ceiling-and-george-santoss-career-have-in-common"
+    enrich = {
+        current_key: {
+            "title": "Politics Podcast: What The Debt Ceiling And George Santos’s Career Have In Common",
+            "published_at": "2023-01-23T23:13:49+00:00",
+        }
+    }
+
+    row = {
+        "rollup_key": (
+            "article:features/politics-podcast-what-the-debt-ceiling-and-george-santoss-career-have-in-common%EF%BF%BC"
+        ),
+        "url": (
+            "https://fivethirtyeight.com/features/"
+            "politics-podcast-what-the-debt-ceiling-and-george-santoss-career-have-in-common%EF%BF%BC/"
+        ),
+    }
+
+    assert _lookup_enrichment(row, enrich) is enrich[current_key]
+
+
 def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
     with path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=list(rows[0]))
@@ -189,11 +246,13 @@ def test_load_podcast_item_urls_maps_only_uploaded_rows(tmp_path: Path) -> None:
                 "mp3_url": "https://traffic.megaphone.fm/ESP1234567890.mp3",
                 "identifier": "fivethirtyeight-politics-esp1234567890",
                 "megaphone_id": "ESP1234567890",
+                "source_article_url": "https://fivethirtyeight.com/features/politics-episode/",
             },
             {
                 "mp3_url": "https://traffic.megaphone.fm/ESP1234567891.mp3",
                 "identifier": "fivethirtyeight-politics-esp1234567891",
                 "megaphone_id": "ESP1234567891",
+                "source_article_url": "https://fivethirtyeight.com/features/skipped-episode/",
             },
         ],
     )
@@ -223,5 +282,67 @@ def test_load_podcast_item_urls_maps_only_uploaded_rows(tmp_path: Path) -> None:
     ) == {
         "podcast:meg/ESP1234567890": (
             "https://archive.org/details/fivethirtyeight-politics-esp1234567890"
-        )
+        ),
+        "article:politics-episode": (
+            "https://archive.org/details/fivethirtyeight-politics-esp1234567890"
+        ),
+        "article:features/politics-episode": (
+            "https://archive.org/details/fivethirtyeight-politics-esp1234567890"
+        ),
     }
+
+
+def test_load_site_podcasts_groups_uploaded_items_by_series(tmp_path: Path) -> None:
+    metadata = tmp_path / "podcast_metadata.csv"
+    upload_log = tmp_path / "podcast_upload_log.csv"
+    _write_csv(
+        metadata,
+        [
+            {
+                "mp3_url": "https://traffic.megaphone.fm/ESP1234567890.mp3",
+                "identifier": "fivethirtyeight-politics-esp1234567890",
+                "title": "Politics episode",
+                "date": "2020-04-15T10:30:00+00:00",
+                "show": "FiveThirtyEight Politics",
+                "show_slug": "politics",
+                "megaphone_id": "ESP1234567890",
+            },
+            {
+                "mp3_url": "https://traffic.megaphone.fm/ESP1234567891.mp3",
+                "identifier": "fivethirtyeight-podcast-19-esp1234567891",
+                "title": "",
+                "date": "2020-05-01",
+                "show": "PODCAST-19: FiveThirtyEight on the Novel Coronavirus",
+                "show_slug": "",
+                "megaphone_id": "ESP1234567891",
+            },
+        ],
+    )
+    _write_csv(
+        upload_log,
+        [
+            {
+                "identifier": "fivethirtyeight-politics-esp1234567890",
+                "uploaded_at": "2026-05-21T00:00:00+00:00",
+                "status": "uploaded",
+                "files": "episode.mp3",
+                "error": "",
+            },
+            {
+                "identifier": "fivethirtyeight-podcast-19-esp1234567891",
+                "uploaded_at": "2026-05-21T00:00:01+00:00",
+                "status": "uploaded",
+                "files": "episode.mp3",
+                "error": "",
+            },
+        ],
+    )
+
+    podcasts = _load_site_podcasts(metadata_path=metadata, upload_log_path=upload_log)
+
+    assert [p.series_slug for p in podcasts] == ["politics", "podcast-19"]
+    assert podcasts[0].url == (
+        "https://archive.org/details/fivethirtyeight-politics-esp1234567890"
+    )
+    assert podcasts[1].series == "Podcast 19"
+    assert podcasts[1].title == "Podcast 19 (2020-05-01)"

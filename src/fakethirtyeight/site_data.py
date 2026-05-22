@@ -9,7 +9,7 @@ with the bare-minimum fields the frontend needs:
 - ``byline``    — display byline as captured
 - ``authors``   — byline split into individual names for browse-by-author
 - ``year``      — integer year derived from published_at
-- ``date``      — published_at (ISO-8601 or YYYY-MM)
+- ``date``      — published_at (ISO-8601, YYYY-MM-DD, or YYYY-MM)
 - ``kind``      — article/liveblog/project/podcast/video/methodology
 - ``url``       — wayback_url to link off to
 
@@ -27,8 +27,17 @@ import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
-from fakethirtyeight.classify import KIND_PODCAST, classify
+from fakethirtyeight.classify import (
+    KIND_ARTICLE,
+    KIND_LIVEBLOG,
+    KIND_METHODOLOGY,
+    KIND_PODCAST,
+    KIND_PROJECT,
+    KIND_VIDEO,
+    classify,
+)
 from fakethirtyeight.curate import CURATED_FILE
 from fakethirtyeight.datasets import write_site_datasets
 from fakethirtyeight.enrich import ENRICHED_FILE, load_enriched
@@ -40,11 +49,31 @@ log = logging.getLogger(__name__)
 SITE_DATA_FILE = Path("web/static/data/articles.json")
 SITE_CSV_FILE = Path("web/static/data/articles.csv")
 SITE_META_FILE = Path("web/static/data/articles-meta.json")
+SITE_PODCASTS_FILE = Path("web/static/data/podcasts.json")
+SITE_PODCASTS_META_FILE = Path("web/static/data/podcasts-meta.json")
 SITEMAP_FILE = Path("web/static/sitemap.xml")
 SITE_BASE_URL = "https://fivethirtyeightindex.com"
 PODCAST_METADATA_FILE = DATA_DIR / "podcast_metadata.csv"
 PODCAST_UPLOAD_LOG = DATA_DIR / "podcast_upload_log.csv"
 ARCHIVE_ITEM_BASE_URL = "https://archive.org/details"
+PODCAST_SERIES_NAMES: dict[str, str] = {
+    "elections": "FiveThirtyEight Elections",
+    "politics": "FiveThirtyEight Politics",
+    "hot-takedown": "Hot Takedown",
+    "podcast-19": "Podcast 19",
+    "whats-the-point": "What's The Point",
+    "the-lab": "The Lab",
+    "gerrymandering": "The Gerrymandering Project",
+    "model-conversations": "Model Conversations",
+    "ratings": "Ratings",
+}
+PODCAST_SOURCE_ARTICLE_KINDS = {
+    KIND_ARTICLE,
+    KIND_LIVEBLOG,
+    KIND_METHODOLOGY,
+    KIND_PROJECT,
+    KIND_VIDEO,
+}
 
 # Capture "Nate Silver and Harry Enten", "A, B, and C", "A / B", "A | B".
 # Slash and pipe forms appear in network-attribution bylines
@@ -159,6 +188,28 @@ class SiteRecord:
         }
 
 
+@dataclass(slots=True)
+class PodcastRecord:
+    id: str
+    title: str
+    date: str
+    year: int | None
+    series: str
+    series_slug: str
+    url: str
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "date": self.date,
+            "year": self.year,
+            "series": self.series,
+            "series_slug": self.series_slug,
+            "url": self.url,
+        }
+
+
 def build(
     *,
     curated_path: Path = CURATED_FILE,
@@ -190,13 +241,13 @@ def build(
             rid = row.get("rollup_key") or ""
             if not rid:
                 continue
-            enrich = enriched_by_id.get(rid)
+            enrich = _lookup_enrichment(row, enriched_by_id)
             record = _build_record(row, enrich)
             if record is None:
                 continue
             if _is_junk_record(record):
                 continue
-            if record.kind == KIND_PODCAST and record.id in podcast_item_urls:
+            if record.id in podcast_item_urls:
                 record.url = podcast_item_urls[record.id]
             records.append(record)
 
@@ -243,13 +294,95 @@ def build(
     # JSON/CSV when the source inventory exists so sitemap prerendering sees
     # the current dataset route list.
     write_site_datasets()
+    podcasts = write_site_podcasts()
 
     # Sitemap covers every prerendered route — homepage, byline index,
     # dataset index, one entry per year, and one entry per byline slug.
-    _write_sitemap(records)
+    _write_sitemap(records, podcasts=podcasts)
 
     log.info("wrote %d records to %s and %s", len(records), out_path, csv_out_path)
     return len(records)
+
+
+def _lookup_enrichment(
+    curated_row: dict[str, str], enriched_by_id: dict[str, dict[str, str]]
+) -> dict[str, str] | None:
+    """Find enrichment for a curated row using stored and current rollups."""
+    rid = curated_row.get("rollup_key") or ""
+    if rid in enriched_by_id:
+        return enriched_by_id[rid]
+
+    c = classify(curated_row.get("url") or "")
+    if c.rollup_key:
+        return enriched_by_id.get(c.rollup_key)
+    return None
+
+
+def write_site_podcasts(
+    *,
+    metadata_path: Path = PODCAST_METADATA_FILE,
+    upload_log_path: Path = PODCAST_UPLOAD_LOG,
+    json_path: Path = SITE_PODCASTS_FILE,
+    meta_path: Path = SITE_PODCASTS_META_FILE,
+) -> list[PodcastRecord]:
+    """Write the static-site podcast JSON from uploaded IA items."""
+    podcasts = _load_site_podcasts(
+        metadata_path=metadata_path,
+        upload_log_path=upload_log_path,
+    )
+
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    with json_path.open("w", encoding="utf-8") as fh:
+        json.dump([p.to_dict() for p in podcasts], fh, ensure_ascii=False)
+
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    with meta_path.open("w", encoding="utf-8") as fh:
+        series = sorted({p.series_slug for p in podcasts if p.series_slug})
+        json.dump({"total": len(podcasts), "series": series}, fh)
+
+    return podcasts
+
+
+def _load_site_podcasts(
+    *,
+    metadata_path: Path = PODCAST_METADATA_FILE,
+    upload_log_path: Path = PODCAST_UPLOAD_LOG,
+) -> list[PodcastRecord]:
+    """Return uploaded podcast records for the dedicated podcast pages."""
+    if not metadata_path.exists() or not upload_log_path.exists():
+        return []
+
+    uploaded = _load_uploaded_podcast_identifiers(upload_log_path)
+    if not uploaded:
+        return []
+
+    records: list[PodcastRecord] = []
+    seen: set[str] = set()
+    with metadata_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            identifier = row.get("identifier") or ""
+            if not identifier or identifier not in uploaded or identifier in seen:
+                continue
+            seen.add(identifier)
+            date = _normalize_site_date(row.get("date") or "")
+            series_slug = _podcast_series_slug(row)
+            series = (
+                PODCAST_SERIES_NAMES.get(series_slug) or row.get("show") or "Podcast"
+            )
+            records.append(
+                PodcastRecord(
+                    id=identifier,
+                    title=_podcast_title(row, series=series),
+                    date=date,
+                    year=_year_from_date(date),
+                    series=series,
+                    series_slug=series_slug,
+                    url=f"{ARCHIVE_ITEM_BASE_URL}/{identifier}",
+                )
+            )
+
+    records.sort(key=lambda r: (r.date or "￿", r.title))
+    return records
 
 
 #: Title prefixes that mean "this row is sandbox/junk content the CMS
@@ -396,9 +529,11 @@ def _load_podcast_item_urls(
             if identifier not in uploaded:
                 continue
             rollup_key = _podcast_rollup_key(row)
-            if not rollup_key:
-                continue
-            out[rollup_key] = f"{ARCHIVE_ITEM_BASE_URL}/{identifier}"
+            item_url = f"{ARCHIVE_ITEM_BASE_URL}/{identifier}"
+            if rollup_key:
+                out[rollup_key] = item_url
+            for article_rollup_key in _podcast_source_article_rollup_keys(row):
+                out[article_rollup_key] = item_url
     return out
 
 
@@ -425,6 +560,62 @@ def _podcast_rollup_key(row: dict[str, str]) -> str:
     if c.kind == KIND_PODCAST:
         return c.rollup_key
     return ""
+
+
+def _podcast_source_article_rollup_keys(row: dict[str, str]) -> list[str]:
+    """Resolve a podcast's source article URL to possible site-data rollup keys."""
+    source_url = row.get("source_article_url") or ""
+    out: list[str] = []
+    c = classify(source_url)
+    if c.kind in PODCAST_SOURCE_ARTICLE_KINDS and c.rollup_key:
+        out.append(c.rollup_key)
+
+    # Some existing article site-data IDs preserve the section path
+    # (article:features/foo) while the current classifier canonicalizes the
+    # same URL to article:foo. Keep both spellings so older curated rows can
+    # still be redirected to their uploaded podcast item.
+    parts = [p for p in urlparse(source_url).path.split("/") if p]
+    if len(parts) >= 2:
+        legacy_key = f"article:{'/'.join(parts)}"
+        if legacy_key not in out:
+            out.append(legacy_key)
+
+    return out
+
+
+def _podcast_series_slug(row: dict[str, str]) -> str:
+    """Stable slug for podcast-series pages."""
+    slug = (row.get("show_slug") or "").strip()
+    if slug in PODCAST_SERIES_NAMES:
+        return slug
+
+    show = (row.get("show") or "").strip()
+    lowered = show.lower()
+    if "podcast-19" in lowered or "coronavirus" in lowered:
+        return "podcast-19"
+    if "hot takedown" in lowered:
+        return "hot-takedown"
+    if "what's the point" in lowered or "whats the point" in lowered:
+        return "whats-the-point"
+    if "elections" in lowered:
+        return "elections"
+    if "politics" in lowered:
+        return "politics"
+    return slugify(show) or "podcast"
+
+
+def _podcast_title(row: dict[str, str], *, series: str) -> str:
+    """Best display title for a podcast row."""
+    title = (row.get("title") or "").strip()
+    if title:
+        return title
+    date = (row.get("date") or "").strip()
+    if date:
+        return f"{series} ({date[:10]})"
+    identifier = (row.get("identifier") or "").strip()
+    if identifier:
+        return identifier.replace("fivethirtyeight-", "").replace("-", " ").title()
+    return series
 
 
 #: Smart-quote / curly-punctuation characters that snuck into titles via
@@ -498,22 +689,24 @@ def _drilldown_suffix(rollup_key: str) -> str:
     return " ".join(p.title() for p in parts if p)
 
 
-def _canonical_score(record: SiteRecord) -> tuple[int, int, int, int, str]:
+def _canonical_score(record: SiteRecord) -> tuple[int, int, int, int, int, str]:
     """Sort key for picking the canonical row out of a dedup group.
 
     Higher tuples win. Priority order:
     1. Article kind beats video (richer text content, /features/ URL).
     2. A non-empty byline beats an empty one (more complete metadata).
     3. Avoid the `_N` WordPress revision suffix.
-    4. Prefer the longer slug (a truncated variant of the same article
+    4. Prefer canonical URLs over share/UTM query variants.
+    5. Prefer the longer slug (a truncated variant of the same article
        loses to its full sibling).
-    5. Alphabetical id as a stable tie-break.
+    6. Alphabetical id as a stable tie-break.
     """
     slug = record.id.split(":", 1)[1] if ":" in record.id else record.id
     is_article = 1 if record.kind == "article" else 0
     has_byline = 1 if record.byline.strip() else 0
     not_revision = 0 if _REVISION_SLUG_SUFFIX.search(slug) else 1
-    return (is_article, has_byline, not_revision, len(slug), slug)
+    no_query = 1 if "?" not in record.url else 0
+    return (is_article, has_byline, not_revision, no_query, len(slug), slug)
 
 
 def _build_record(
@@ -557,6 +750,7 @@ def _build_record(
         title = ""
         byline = ""
         date = earliest_ts
+    date = _normalize_site_date(date)
 
     # Fall back to a slug-derived title when we couldn't extract one.
     if not title:
@@ -665,6 +859,21 @@ def _year_from_date(date: str) -> int | None:
     return None
 
 
+def _normalize_site_date(date: str) -> str:
+    """Normalize date-like values emitted to the frontend.
+
+    Real publication dates are already ISO-ish, but fallback rows can use
+    Wayback timestamps such as ``20150502234807``. The frontend expects
+    at least ``YYYY-MM-DD`` when day precision exists.
+    """
+    date = date.strip()
+    if re.fullmatch(r"\d{14}", date) or re.fullmatch(r"\d{8}", date):
+        return f"{date[:4]}-{date[4:6]}-{date[6:8]}"
+    if re.fullmatch(r"\d{6}", date):
+        return f"{date[:4]}-{date[4:6]}"
+    return date
+
+
 #: 538-era plausible publication years. Used to filter spurious 4-digit
 #: matches in URLs (e.g. zip codes, sample sizes, ticket IDs).
 _URL_YEAR = re.compile(r"(?<!\d)(20[0-2]\d)(?!\d)")
@@ -734,7 +943,12 @@ def iter_byline_slugs(records: Iterable[SiteRecord]) -> dict[str, list[str]]:
     return out
 
 
-def _write_sitemap(records: list[SiteRecord], out_path: Path = SITEMAP_FILE) -> None:
+def _write_sitemap(
+    records: list[SiteRecord],
+    *,
+    podcasts: list[PodcastRecord] | None = None,
+    out_path: Path = SITEMAP_FILE,
+) -> None:
     """Emit a flat sitemap.xml listing every prerendered route."""
     years: set[int] = set()
     year_months: set[str] = set()  # "YYYY-MM" buckets with at least one entry
@@ -755,12 +969,16 @@ def _write_sitemap(records: list[SiteRecord], out_path: Path = SITEMAP_FILE) -> 
         f"{SITE_BASE_URL}/",
         f"{SITE_BASE_URL}/byline/",
         f"{SITE_BASE_URL}/dataset/",
+        f"{SITE_BASE_URL}/podcast/",
     ]
     urls.extend(f"{SITE_BASE_URL}/year/{y}/" for y in sorted(years))
     urls.extend(
         f"{SITE_BASE_URL}/year/{ym[:4]}/{ym[5:]}/" for ym in sorted(year_months)
     )
     urls.extend(f"{SITE_BASE_URL}/byline/{slug}/" for slug in sorted(bylines))
+    if podcasts:
+        series = sorted({p.series_slug for p in podcasts if p.series_slug})
+        urls.extend(f"{SITE_BASE_URL}/podcast/{slug}/" for slug in series)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as fh:

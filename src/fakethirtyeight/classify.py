@@ -82,6 +82,7 @@ _NYT_PERMALINK = re.compile(
 _MEGAPHONE_EP_ID = re.compile(r"(ESP\d+)", re.IGNORECASE)
 
 _NUMERIC = re.compile(r"^\d+$")
+_INVISIBLE_SLUG_CHARS = str.maketrans("", "", "\ufffc\ufffd")
 
 
 @dataclass(slots=True, frozen=True)
@@ -223,7 +224,7 @@ def classify(url: str, host: str | None = None) -> Classification:
         # Features + DataLab era articles share slugs; roll up together.
         if first in {"features", "datalab"}:
             if len(segs) == 2:
-                return Classification(KIND_ARTICLE, f"article:{segs[1]}")
+                return Classification(KIND_ARTICLE, f"article:{_slug_segment(segs[1])}")
             # /features/<slug>/comment-page-N/ → paginated
             if _COMMENT_PAGE.search(path):
                 return Classification(KIND_PAGINATED, f"paginated:{path}")
@@ -240,18 +241,18 @@ def classify(url: str, host: str | None = None) -> Classification:
         if first == "interactives":
             if len(segs) == 1:
                 return Classification(KIND_SECTION, "section:interactives")
-            return Classification(KIND_PROJECT, f"project:{segs[1]}")
+            return Classification(KIND_PROJECT, f"project:{_slug_segment(segs[1])}")
 
         # Videos & podcasts
         if first == "videos":
             if len(segs) == 2:
-                return Classification(KIND_VIDEO, f"video:{segs[1]}")
+                return Classification(KIND_VIDEO, f"video:{_slug_segment(segs[1])}")
             if len(segs) == 1:
                 return Classification(KIND_SECTION, "section:videos")
             return Classification(KIND_OTHER, f"other:{path}")
         if first in {"podcasts", "podcast"}:
             if len(segs) == 2:
-                return Classification(KIND_PODCAST, f"podcast:{segs[1]}")
+                return Classification(KIND_PODCAST, f"podcast:{_slug_segment(segs[1])}")
             if len(segs) == 1:
                 return Classification(KIND_SECTION, "section:podcasts")
             return Classification(KIND_OTHER, f"other:{path}")
@@ -261,7 +262,9 @@ def classify(url: str, host: str | None = None) -> Classification:
         # Wayback drilldown noise rather than a distinct doc.
         if first == "methodology":
             if len(segs) >= 2:
-                return Classification(KIND_METHODOLOGY, f"methodology:{segs[1]}")
+                return Classification(
+                    KIND_METHODOLOGY, f"methodology:{_slug_segment(segs[1])}"
+                )
             return Classification(KIND_METHODOLOGY, "methodology:")
 
         # Section landings/sub-landings.
@@ -288,3 +291,9 @@ def classify(url: str, host: str | None = None) -> Classification:
 
     # ---- malformed / unrecognized hosts --------------------------------
     return Classification(KIND_OTHER, f"unknown-host:{h}{path}")
+
+
+def _slug_segment(segment: str) -> str:
+    """Normalize one URL path segment for rollup-key use."""
+    slug = unquote(segment).translate(_INVISIBLE_SLUG_CHARS)
+    return re.sub(r"[-\s]+", "-", slug).strip("-")

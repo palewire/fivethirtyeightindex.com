@@ -1,9 +1,10 @@
-import { loadDatasets, loadEntries } from '$lib/data';
+import { loadDatasets, loadEntries, loadPodcasts } from '$lib/data';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch }) => {
 	const cache = await loadEntries(fetch);
 	const datasetCache = await loadDatasets(fetch);
+	const podcastCache = await loadPodcasts(fetch);
 
 	// Top byline buckets (most prolific authors)
 	const byByline = [...cache.byBylineSlug.entries()]
@@ -17,6 +18,8 @@ export const load: PageLoad = async ({ fetch }) => {
 		totalBylines: byByline.length,
 		datasets: datasetCache.all.slice(0, 40),
 		totalDatasets: datasetCache.all.length,
+		podcastSeries: podcastCache.series,
+		totalPodcasts: podcastCache.all.length,
 		// `cache.all` is sorted oldest-first; the first slice is "from the
 		// beginning" — appropriate for a retrospective. Kept short so the
 		// homepage stays scannable; year pages are the deep-dive.

@@ -3,19 +3,20 @@
 Some images — especially the timestamped ``screen-shot-…`` files —
 don't have meaningful filenames or alt text, so we can't tell from
 metadata alone whether they're charts, chats, or game UIs. This
-module sends each one through Claude's vision API to get:
+module sends each one through an OpenAI-compatible LiteLLM vision endpoint to get:
 
 * a content category (``chart``, ``map``, ``table``, ``chart-screenshot``,
   ``chat``, ``social-media``, ``ui-screenshot``, ``photo``, ``other``)
 * a one-sentence description (becomes alt text on the IA item)
 * a concise suggested title
+* any visible text extracted from the image
 
 Results are written to ``data/image_captions.csv`` keyed by identifier
 so :mod:`ia_image_upload` can join them in and override the
 filename-derived category for items in scope.
 
-Auth: ``ANTHROPIC_API_KEY`` env var. Resumable: identifiers already in
-the captions CSV are skipped.
+Auth: ``LITELLM_API_KEY`` + ``LITELLM_BASE_URL`` env vars. Resumable:
+identifiers already in the captions CSV are skipped.
 """
 
 from __future__ import annotations
@@ -27,11 +28,13 @@ import logging
 import os
 import re
 import threading
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
+from urllib.parse import urljoin
 
-import anthropic
-from anthropic import APIStatusError
+import httpx
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -40,7 +43,8 @@ from tenacity import (
 )
 from tqdm.contrib.concurrent import thread_map
 
-from fakethirtyeight.images import IMAGE_LOG, IMAGE_REFS_FILE
+from fakethirtyeight.http import DEFAULT_TIMEOUT, make_ssl_context
+from fakethirtyeight.images import IMAGE_LOG, IMAGE_REFS_FILE, _is_image_body
 from fakethirtyeight.paths import DATA_DIR, ensure_dirs
 
 log = logging.getLogger(__name__)
@@ -52,14 +56,15 @@ CAPTION_FIELDS = (
     "ai_category",
     "ai_description",
     "ai_title",
+    "ai_text",
     "model",
     "status",
     "error",
 )
 
-#: Default model — Sonnet is the sweet spot for visual classification.
-#: Override with ``--model`` on the CLI.
-DEFAULT_MODEL = "claude-sonnet-4-5"
+#: Default model. Prefer ``LITELLM_MODEL`` so local config can choose
+#: whatever the gateway exposes. Override with ``--model`` on the CLI.
+DEFAULT_MODEL = os.environ.get("LITELLM_MODEL") or "gpt-4o-mini"
 
 #: Categories the model is allowed to return. Constrained list keeps
 #: the downstream filter logic deterministic.
@@ -95,6 +100,9 @@ with these exact keys:
   "title":       a concise display title for an archive.org item
                  (≤80 chars; if the image is a chart, prefer the
                  chart's own title text)
+  "text":        all legible text visible in the image, preserving the
+                 rough reading order. Use an empty string if there is
+                 no legible text. Do not summarize or invent text.
 
 Return ONLY the JSON. No prose, no markdown fences.\
 """.format(categories=", ".join(ALLOWED_CATEGORIES))
@@ -106,13 +114,14 @@ class CaptionResult:
     ai_category: str = ""
     ai_description: str = ""
     ai_title: str = ""
+    ai_text: str = ""
     model: str = ""
     status: str = "ok"
     error: str = ""
 
 
 def _detect_media_type(path: Path) -> str:
-    """Pick the IANA media type Claude expects for the image source."""
+    """Pick the IANA media type the vision endpoint expects."""
     ext = path.suffix.lower()
     by_ext = {
         ".jpg": "image/jpeg",
@@ -122,6 +131,32 @@ def _detect_media_type(path: Path) -> str:
         ".webp": "image/webp",
     }
     return by_ext.get(ext, "image/jpeg")
+
+
+def _litellm_url() -> str:
+    base = (os.environ.get("LITELLM_BASE_URL") or "").strip()
+    if not base:
+        msg = "Set LITELLM_BASE_URL first."
+        raise RuntimeError(msg)
+    if base.rstrip("/").endswith("/chat/completions"):
+        return base
+    return urljoin(base.rstrip("/") + "/", "chat/completions")
+
+
+def _litellm_headers() -> dict[str, str]:
+    key = (os.environ.get("LITELLM_API_KEY") or "").strip()
+    if not key:
+        msg = "Set LITELLM_API_KEY first."
+        raise RuntimeError(msg)
+    user_agent = (os.environ.get("LITELLM_USER_AGENT") or "").strip()
+    if not user_agent:
+        msg = "Set LITELLM_USER_AGENT first."
+        raise RuntimeError(msg)
+    return {
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+        "User-Agent": user_agent,
+    }
 
 
 _JSON_RX = re.compile(r"\{.*\}", re.DOTALL)
@@ -137,38 +172,73 @@ def _parse_response(text: str) -> dict[str, str]:
     return json.loads(text)
 
 
+def _content_from_response(data: dict[str, object]) -> str:
+    """Extract assistant text from an OpenAI-compatible response."""
+    if data.get("error"):
+        error = data["error"]
+        if isinstance(error, Mapping):
+            error_map = cast(Mapping[str, object], error)
+            message_obj = error_map.get("message")
+            message = str(message_obj or error_map)
+        else:
+            message = str(error)
+        msg = f"LiteLLM error: {message}"
+        raise RuntimeError(msg[:500])
+
+    choices = data.get("choices")
+    if not isinstance(choices, list) or not choices:
+        msg = f"LiteLLM response missing choices: keys={sorted(data)}"
+        raise RuntimeError(msg)
+    first = choices[0]
+    if not isinstance(first, dict):
+        msg = "LiteLLM response choice is not an object"
+        raise RuntimeError(msg)
+    message = first.get("message")
+    if isinstance(message, dict) and isinstance(message.get("content"), str):
+        return message["content"]
+    text = first.get("text")
+    if isinstance(text, str):
+        return text
+    msg = "LiteLLM response choice missing message content"
+    raise RuntimeError(msg)
+
+
 @retry(
-    retry=retry_if_exception_type(APIStatusError),
+    retry=retry_if_exception_type(httpx.HTTPError),
     stop=stop_after_attempt(4),
     wait=wait_exponential(multiplier=2, min=4, max=60),
     reraise=True,
 )
 def _classify_one(
-    client: anthropic.Anthropic, image_path: Path, *, model: str
+    client: httpx.Client, image_path: Path, *, model: str
 ) -> dict[str, str]:
-    """Send one image to Claude. Returns the parsed JSON response."""
+    """Send one image to a LiteLLM vision endpoint and parse JSON output."""
     data = base64.standard_b64encode(image_path.read_bytes()).decode("ascii")
-    msg = client.messages.create(
-        model=model,
-        max_tokens=400,
-        messages=[
+    payload = {
+        "model": model,
+        "max_tokens": 400,
+        "messages": [
             {
                 "role": "user",
                 "content": [
+                    {"type": "text", "text": _PROMPT},
                     {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": _detect_media_type(image_path),
-                            "data": data,
+                        "type": "image_url",
+                        "image_url": {
+                            "url": (
+                                f"data:{_detect_media_type(image_path)};base64,{data}"
+                            )
                         },
                     },
-                    {"type": "text", "text": _PROMPT},
                 ],
             }
         ],
-    )
-    raw = "".join(block.text for block in msg.content if block.type == "text")
+    }
+    resp = client.post(_litellm_url(), json=payload)
+    if resp.status_code in {429, 500, 502, 503, 504}:
+        resp.raise_for_status()
+    resp.raise_for_status()
+    raw = _content_from_response(resp.json())
     return _parse_response(raw)
 
 
@@ -189,6 +259,22 @@ def _load_done(path: Path) -> set[str]:
             if (row.get("status") or "") == "ok" and row.get("identifier"):
                 out.add(row["identifier"])
     return out
+
+
+def _ensure_caption_header(path: Path) -> None:
+    """Upgrade older caption CSVs before appending rows with new fields."""
+    if not path.exists() or path.stat().st_size == 0:
+        return
+    with path.open(newline="", encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        if reader.fieldnames == list(CAPTION_FIELDS):
+            return
+        rows = list(reader)
+    with path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=CAPTION_FIELDS)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: row.get(field, "") for field in CAPTION_FIELDS})
 
 
 def _select_targets(
@@ -222,8 +308,11 @@ def _select_targets(
             if only_screenshots and cat_by_id.get(ident) != "screenshot":
                 continue
             fp = DATA_DIR.parent / fp_rel
-            if fp.exists():
-                targets.append((ident, fp))
+            if not fp.exists():
+                continue
+            with fp.open("rb") as image_fh:
+                if _is_image_body(image_fh.read(2048)):
+                    targets.append((ident, fp))
     return targets
 
 
@@ -237,16 +326,17 @@ def caption_images(
     image_log_path: Path = IMAGE_LOG,
     out_path: Path = CAPTIONS_FILE,
 ) -> tuple[int, int]:
-    """Classify a subset of downloaded images using Claude vision.
+    """Classify a subset of downloaded images using LiteLLM vision.
 
     Returns ``(captioned, failed)``. Resumable via ``out_path``.
     """
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        msg = "Set ANTHROPIC_API_KEY first."
-        raise RuntimeError(msg)
+    # Validate config before doing any target scan or log setup.
+    headers = _litellm_headers()
+    _litellm_url()
 
     ensure_dirs()
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_caption_header(out_path)
 
     targets = _select_targets(
         refs_path, image_log_path, only_screenshots=only_screenshots
@@ -268,9 +358,14 @@ def caption_images(
 
     write_header = not out_path.exists()
     write_lock = threading.Lock()
-    client = anthropic.Anthropic()
-
-    with out_path.open("a", newline="", encoding="utf-8") as fh:
+    with (
+        httpx.Client(
+            timeout=DEFAULT_TIMEOUT,
+            headers=headers,
+            verify=make_ssl_context(),
+        ) as client,
+        out_path.open("a", newline="", encoding="utf-8") as fh,
+    ):
         writer = csv.DictWriter(fh, fieldnames=CAPTION_FIELDS)
         if write_header:
             writer.writeheader()
@@ -285,6 +380,7 @@ def caption_images(
                     ai_category=_normalize_category(parsed.get("category", "")),
                     ai_description=str(parsed.get("description", "")).strip()[:300],
                     ai_title=str(parsed.get("title", "")).strip()[:120],
+                    ai_text=str(parsed.get("text", "")).strip()[:5000],
                     model=model,
                     status="ok",
                 )
@@ -303,6 +399,7 @@ def caption_images(
                         "ai_category": result.ai_category,
                         "ai_description": result.ai_description,
                         "ai_title": result.ai_title,
+                        "ai_text": result.ai_text,
                         "model": result.model,
                         "status": result.status,
                         "error": result.error,

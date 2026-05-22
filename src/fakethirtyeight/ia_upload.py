@@ -33,13 +33,16 @@ from typing import Protocol
 from internetarchive import get_session
 
 from fakethirtyeight.download_podcasts import PODCASTS_DIR, filename_for
+from fakethirtyeight.ia_metadata import year_from_date
 from fakethirtyeight.paths import DATA_DIR, ensure_dirs
 from fakethirtyeight.podcast_metadata import METADATA_FILE
 
 log = logging.getLogger(__name__)
 
 UPLOAD_LOG = DATA_DIR / "podcast_upload_log.csv"
+METADATA_REPAIR_LOG = DATA_DIR / "podcast_metadata_repair_log.csv"
 LOG_FIELDS = ("identifier", "uploaded_at", "status", "files", "error")
+METADATA_REPAIR_LOG_FIELDS = ("identifier", "repaired_at", "status", "year", "error")
 
 #: Default IA collection slug for the FiveThirtyEight archive.
 DEFAULT_COLLECTION = "fivethirtyeight-collection"
@@ -76,7 +79,14 @@ class _ArchiveItem(Protocol):
         retries: int,
         retries_sleep: int,
         verbose: bool,
+        request_kwargs: dict[str, str] | None = None,
     ) -> Iterable[_UploadResponse]: ...
+
+    def modify_metadata(
+        self,
+        metadata: dict[str, str],
+        request_kwargs: dict[str, str] | None = None,
+    ) -> _UploadResponse: ...
 
 
 class _ArchiveSession(Protocol):
@@ -103,6 +113,33 @@ def _load_credentials() -> tuple[str, str]:
     return access, secret
 
 
+def _configure_ca_bundle() -> None:
+    ca_bundle = _ca_bundle_path()
+    if not ca_bundle:
+        return
+    os.environ.setdefault("REQUESTS_CA_BUNDLE", ca_bundle)
+    os.environ.setdefault("SSL_CERT_FILE", ca_bundle)
+
+
+def _ia_request_kwargs() -> dict[str, str] | None:
+    ca_bundle = _ca_bundle_path()
+    return {"verify": ca_bundle} if ca_bundle else None
+
+
+def _ca_bundle_path() -> str:
+    env_bundle = os.environ.get("REQUESTS_CA_BUNDLE") or os.environ.get("SSL_CERT_FILE")
+    if env_bundle:
+        return env_bundle
+    corporate_bundle = Path("/Users/U6122976/final-certs.pem")
+    if corporate_bundle.exists():
+        return str(corporate_bundle)
+    try:
+        import certifi
+    except ImportError:
+        return ""
+    return certifi.where()
+
+
 def _load_done(log_path: Path) -> set[str]:
     """Identifiers that previously uploaded successfully.
 
@@ -124,6 +161,7 @@ def _metadata_for_row(
 ) -> dict[str, str | list[str]]:
     """Build the IA item metadata dict from one CSV row."""
     external_identifiers = _external_identifiers_for(row)
+    date = row.get("date") or ""
     md: dict[str, str | list[str]] = {
         "collection": collection,
         "mediatype": row.get("mediatype") or "audio",
@@ -131,7 +169,8 @@ def _metadata_for_row(
         "creator": row.get("creator") or "FiveThirtyEight",
         "contributor": contributor,
         "publisher": DEFAULT_PUBLISHER,
-        "date": row.get("date") or "",
+        "date": date,
+        "year": year_from_date(date),
         "description": row.get("description") or "",
         "subject": _subjects_for(row),
         "source": row.get("source") or row.get("mp3_url", ""),
@@ -141,7 +180,9 @@ def _metadata_for_row(
         md["album"] = row["show"]
     if external_identifiers:
         md["external-identifier"] = external_identifiers
-    if row.get("player_url"):
+    if row.get("source_article_url"):
+        md["originalurl"] = row["source_article_url"]
+    elif row.get("player_url"):
         md["originalurl"] = row["player_url"]
     # Drop empty values — IA rejects empty strings in some fields.
     return {k: v for k, v in md.items() if v not in ("", [], None)}
@@ -179,6 +220,12 @@ def _external_identifiers_for(row: dict[str, str]) -> list[str]:
     player_url = (row.get("player_url") or "").strip()
     if player_url:
         _append_unique(out, f"urn:fakethirtyeight:podcast-player-url:{player_url}")
+
+    source_article_url = (row.get("source_article_url") or "").strip()
+    if source_article_url:
+        _append_unique(
+            out, f"urn:fakethirtyeight:source-article-url:{source_article_url}"
+        )
     return out
 
 
@@ -200,9 +247,18 @@ def _files_for_row(row: dict[str, str], *, podcasts_dir: Path) -> list[Path]:
         if not thumb_path.is_absolute():
             # CSV stores it relative to the repo root.
             thumb_path = DATA_DIR.parent / thumb_path
-        if thumb_path.exists():
+        if thumb_path.exists() and _is_supported_image(thumb_path):
             files.append(thumb_path)
     return files
+
+
+def _is_supported_image(path: Path) -> bool:
+    """Return whether ``path`` starts with an IA-acceptable image signature."""
+    with path.open("rb") as fh:
+        head = fh.read(12)
+    return head.startswith(
+        (b"\xff\xd8\xff", b"\x89PNG\r\n\x1a\n", b"GIF87a", b"GIF89a")
+    )
 
 
 def _duplicate_pending_identifiers(
@@ -272,6 +328,7 @@ def upload_one(
             retries=10,
             retries_sleep=30,
             verbose=False,
+            request_kwargs=_ia_request_kwargs(),
         )
         for resp in responses:
             resp.raise_for_status()
@@ -344,6 +401,7 @@ def upload_podcasts(
     if dry_run:
         session = None
     else:
+        _configure_ca_bundle()
         auth = _load_credentials()
         session = get_session(config={"s3": {"access": auth[0], "secret": auth[1]}})
 
@@ -393,3 +451,151 @@ def upload_podcasts(
                 time.sleep(delay)
 
     return uploaded, skipped, failed
+
+
+def repair_podcast_years(
+    *,
+    csv_path: Path = METADATA_FILE,
+    upload_log_path: Path = UPLOAD_LOG,
+    repair_log_path: Path = METADATA_REPAIR_LOG,
+    delay: float = 1.0,
+    limit: int | None = None,
+    dry_run: bool = False,
+    force: bool = False,
+) -> tuple[int, int, int]:
+    """Backfill archive.org ``year`` metadata for uploaded podcast items."""
+    ensure_dirs()
+    if not csv_path.exists():
+        msg = (
+            f"metadata file not found: {csv_path}. "
+            "Run `fakethirtyeight podcast-metadata` first."
+        )
+        raise FileNotFoundError(msg)
+
+    with csv_path.open(newline="", encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+
+    uploaded = _load_done(upload_log_path)
+    repaired_done = set() if force else _load_repaired(repair_log_path)
+    pending = [
+        r
+        for r in rows
+        if r.get("identifier") in uploaded
+        and r.get("identifier") not in repaired_done
+        and year_from_date(r.get("date") or "")
+    ]
+    skipped = len(rows) - len(pending)
+    if limit is not None:
+        pending = pending[:limit]
+
+    if dry_run:
+        session = None
+    else:
+        _configure_ca_bundle()
+        auth = _load_credentials()
+        session = get_session(config={"s3": {"access": auth[0], "secret": auth[1]}})
+
+    write_header = not repair_log_path.exists()
+    repaired = failed = 0
+    with repair_log_path.open("a", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=METADATA_REPAIR_LOG_FIELDS)
+        if write_header:
+            writer.writeheader()
+
+        for row in pending:
+            result = repair_one_podcast_year(
+                session,
+                row,
+                year=year_from_date(row.get("date") or ""),
+                dry_run=dry_run,
+            )
+            writer.writerow(_metadata_repair_log_row(result))
+            fh.flush()
+
+            if result.status == "repaired":
+                repaired += 1
+            elif result.status == "dry_run":
+                skipped += 1
+            else:
+                failed += 1
+
+            log.info("%s year=%s — %s", result.status, result.year, result.identifier)
+            if delay > 0 and not dry_run:
+                time.sleep(delay)
+
+    return repaired, skipped, failed
+
+
+@dataclass(slots=True, frozen=True)
+class MetadataRepairResult:
+    identifier: str
+    status: str  # 'repaired' | 'dry_run' | 'skipped_missing' | 'error'
+    year: str = ""
+    error: str = ""
+
+
+def repair_one_podcast_year(
+    session: _ArchiveSession | None,
+    row: dict[str, str],
+    *,
+    year: str,
+    dry_run: bool,
+) -> MetadataRepairResult:
+    """Patch one uploaded podcast item's IA ``year`` metadata field."""
+    identifier = row.get("identifier") or ""
+    if not identifier:
+        return MetadataRepairResult(
+            identifier="", status="error", year=year, error="missing identifier"
+        )
+    if not year:
+        return MetadataRepairResult(
+            identifier=identifier,
+            status="skipped_missing",
+            error="row has no year",
+        )
+    if dry_run:
+        return MetadataRepairResult(identifier=identifier, status="dry_run", year=year)
+    if session is None:
+        return MetadataRepairResult(
+            identifier=identifier,
+            status="error",
+            year=year,
+            error="archive.org session not initialized",
+        )
+
+    try:
+        item = session.get_item(identifier)
+        resp = item.modify_metadata(
+            {"year": year},
+            request_kwargs=_ia_request_kwargs(),
+        )
+        resp.raise_for_status()
+    except Exception as exc:  # noqa: BLE001
+        return MetadataRepairResult(
+            identifier=identifier,
+            status="error",
+            year=year,
+            error=repr(exc)[:300],
+        )
+    return MetadataRepairResult(identifier=identifier, status="repaired", year=year)
+
+
+def _load_repaired(log_path: Path) -> set[str]:
+    if not log_path.exists():
+        return set()
+    done: set[str] = set()
+    with log_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            if (row.get("status") or "") == "repaired" and row.get("identifier"):
+                done.add(row["identifier"])
+    return done
+
+
+def _metadata_repair_log_row(result: MetadataRepairResult) -> dict[str, str]:
+    return {
+        "identifier": result.identifier,
+        "repaired_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "status": result.status,
+        "year": result.year,
+        "error": result.error,
+    }

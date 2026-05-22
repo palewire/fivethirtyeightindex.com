@@ -8,7 +8,7 @@
  *   - Node at build time (svelte-kit prerender entries generators):
  *     read it directly from disk.
  */
-import type { Dataset, Entry } from './types';
+import type { Dataset, Entry, Podcast } from './types';
 import { base } from '$app/paths';
 import { browser } from '$app/environment';
 
@@ -50,6 +50,14 @@ export interface DatasetCache {
 }
 
 let datasetCache: DatasetCache | null = null;
+
+export interface PodcastCache {
+	all: Podcast[];
+	bySeriesSlug: Map<string, { name: string; podcasts: Podcast[] }>;
+	series: { slug: string; name: string; count: number }[];
+}
+
+let podcastCache: PodcastCache | null = null;
 
 const DIACRITICS = /[̀-ͯ]/g;
 
@@ -93,6 +101,22 @@ async function readDatasetsFromDisk(): Promise<Dataset[]> {
 		import('node:path')
 	]);
 	const path = resolve(process.cwd(), 'static/data/datasets.json');
+	const text = await readFile(path, 'utf8');
+	return JSON.parse(text);
+}
+
+async function fetchPodcasts(fetcher: typeof fetch): Promise<Podcast[]> {
+	const resp = await fetcher(`${base}/data/podcasts.json`);
+	if (!resp.ok) throw new Error(`failed to load podcasts.json: ${resp.status}`);
+	return resp.json();
+}
+
+async function readPodcastsFromDisk(): Promise<Podcast[]> {
+	const [{ readFile }, { resolve }] = await Promise.all([
+		import('node:fs/promises'),
+		import('node:path')
+	]);
+	const path = resolve(process.cwd(), 'static/data/podcasts.json');
 	const text = await readFile(path, 'utf8');
 	return JSON.parse(text);
 }
@@ -174,4 +198,28 @@ export async function loadDatasets(fetcher?: typeof fetch): Promise<DatasetCache
 
 	datasetCache = { all, bySlug };
 	return datasetCache;
+}
+
+export async function loadPodcasts(fetcher?: typeof fetch): Promise<PodcastCache> {
+	if (podcastCache) return podcastCache;
+
+	const all = browser && fetcher ? await fetchPodcasts(fetcher) : await readPodcastsFromDisk();
+	const bySeriesSlug = new Map<string, { name: string; podcasts: Podcast[] }>();
+	for (const podcast of all) {
+		const slug = podcast.series_slug;
+		if (!slug) continue;
+		let bucket = bySeriesSlug.get(slug);
+		if (!bucket) {
+			bucket = { name: podcast.series, podcasts: [] };
+			bySeriesSlug.set(slug, bucket);
+		}
+		bucket.podcasts.push(podcast);
+	}
+
+	const series = [...bySeriesSlug.entries()]
+		.map(([slug, { name, podcasts }]) => ({ slug, name, count: podcasts.length }))
+		.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+	podcastCache = { all, bySeriesSlug, series };
+	return podcastCache;
 }

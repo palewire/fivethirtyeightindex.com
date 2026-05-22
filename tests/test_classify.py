@@ -22,7 +22,7 @@ from fakethirtyeight.classify import (
     classify,
 )
 
-CASES: list[tuple[str, str, str]] = [
+CASES: list[tuple[str, str, str | None]] = [
     # Homepages
     ("https://fivethirtyeight.com/", KIND_HOMEPAGE, "site:/"),
     ("https://projects.fivethirtyeight.com/", KIND_HOMEPAGE, "projects:/"),
@@ -32,6 +32,16 @@ CASES: list[tuple[str, str, str]] = [
         "https://fivethirtyeight.com/features/the-real-mvp-of-the-finals/",
         KIND_ARTICLE,
         "article:the-real-mvp-of-the-finals",
+    ),
+    (
+        "https://fivethirtyeight.com/features/politics-podcast-what-the-debt-ceiling-and-george-santoss-career-have-in-common%EF%BF%BC/",
+        KIND_ARTICLE,
+        "article:politics-podcast-what-the-debt-ceiling-and-george-santoss-career-have-in-common",
+    ),
+    (
+        "https://fivethirtyeight.com/features/politics-podcast-what-the-debt-ceiling-and-george-santoss-career-have-in-common%ef%bf%bc/?share=twitter&amp",
+        KIND_ARTICLE,
+        "article:politics-podcast-what-the-debt-ceiling-and-george-santoss-career-have-in-common",
     ),
     # DataLab era article
     (

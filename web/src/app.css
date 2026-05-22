@@ -201,6 +201,21 @@ a:active {
 	color: var(--color-fg);
 }
 
+.entries .c-series {
+	color: var(--color-muted);
+	white-space: nowrap;
+	text-align: right;
+	width: 14em;
+}
+
+.entries .c-series a {
+	color: var(--color-muted);
+}
+
+.entries .c-series a:hover {
+	color: var(--color-fg);
+}
+
 /* On narrow screens, keep the tabular layout. Just narrow the
    auxiliary date + byline columns so the headline cell takes the
    remaining horizontal room and wraps as needed. We deliberately
@@ -217,12 +232,17 @@ a:active {
 		max-width: 7em;
 		padding-left: 0.4em;
 	}
+
+	.entries .c-series {
+		display: none;
+	}
 }
 
 @media (max-width: 400px) {
 	/* On phones, hide the byline column entirely so the headline isn't
 	   crushed. The byline is still reachable via the byline pages. */
-	.entries .c-byline {
+	.entries .c-byline,
+	.entries .c-series {
 		display: none;
 	}
 }

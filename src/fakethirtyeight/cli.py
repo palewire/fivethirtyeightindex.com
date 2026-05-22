@@ -308,6 +308,49 @@ def upload_datasets(
     )
 
 
+@cli.command("repair-dataset-years")
+@click.option(
+    "--delay",
+    type=float,
+    default=1.0,
+    show_default=True,
+    help="Seconds to sleep between metadata updates.",
+)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many items to repair (smoke testing).",
+)
+@click.option(
+    "--dry-run/--no-dry-run",
+    default=False,
+    help="Log what would happen without hitting archive.org.",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Repair items even if the repair log already marks them done.",
+)
+def repair_dataset_years(
+    delay: float,
+    limit: int | None,
+    dry_run: bool,
+    force: bool,
+) -> None:
+    """Backfill archive.org `year` metadata on uploaded dataset items."""
+    repaired, skipped, failed = datasets_mod.repair_dataset_years(
+        delay=delay,
+        limit=limit,
+        dry_run=dry_run,
+        force=force,
+    )
+    click.echo(
+        f"repaired: {repaired:,}\nskipped:  {skipped:,}\nfailed:   {failed:,}\n"
+        f"\nlog: {datasets_mod.DATASET_METADATA_REPAIR_LOG}"
+    )
+
+
 @cli.command()
 @click.option("--workers", type=int, default=4, show_default=True)
 @click.option(
@@ -409,17 +452,17 @@ def download_images_cli(workers: int, limit: int | None) -> None:
     "--model",
     default=caption_mod.DEFAULT_MODEL,
     show_default=True,
-    help="Claude model to use for classification.",
+    help="LiteLLM model to use for classification.",
 )
 def caption_images(workers: int, limit: int | None, do_all: bool, model: str) -> None:
-    """Use Claude vision to classify ambiguous images.
+    """Use LiteLLM vision to classify ambiguous images.
 
-    For each target image, asks Claude to return a content category,
+    For each target image, asks the vision model to return a content category,
     description, and suggested title. Results land in
     data/image_captions.csv and are consumed by `upload-images` to
     decide which screenshots count as in-scope data viz.
 
-    Requires ANTHROPIC_API_KEY.
+    Requires LITELLM_API_KEY, LITELLM_BASE_URL, and LITELLM_USER_AGENT.
     """
     ok, failed = caption_mod.caption_images(
         workers=workers,
@@ -630,6 +673,49 @@ def upload_podcasts(
     click.echo(
         f"uploaded: {uploaded:,}\nskipped:  {skipped:,}\nfailed:   {failed:,}\n"
         f"\nlog: {ia_upload_mod.UPLOAD_LOG}"
+    )
+
+
+@cli.command("repair-podcast-years")
+@click.option(
+    "--delay",
+    type=float,
+    default=1.0,
+    show_default=True,
+    help="Seconds to sleep between metadata updates.",
+)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many items to repair (smoke testing).",
+)
+@click.option(
+    "--dry-run/--no-dry-run",
+    default=False,
+    help="Log what would happen without hitting archive.org.",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Repair items even if the repair log already marks them done.",
+)
+def repair_podcast_years(
+    delay: float,
+    limit: int | None,
+    dry_run: bool,
+    force: bool,
+) -> None:
+    """Backfill archive.org `year` metadata on uploaded podcast items."""
+    repaired, skipped, failed = ia_upload_mod.repair_podcast_years(
+        delay=delay,
+        limit=limit,
+        dry_run=dry_run,
+        force=force,
+    )
+    click.echo(
+        f"repaired: {repaired:,}\nskipped:  {skipped:,}\nfailed:   {failed:,}\n"
+        f"\nlog: {ia_upload_mod.METADATA_REPAIR_LOG}"
     )
 
 

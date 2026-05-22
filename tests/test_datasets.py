@@ -18,6 +18,7 @@ from fakethirtyeight.datasets import (
     first_github_commit_date,
     metadata_for_record,
     parse_index_csv,
+    repair_one_dataset_year,
     scrape_index,
     upload_one_bundle,
     write_site_datasets,
@@ -120,6 +121,7 @@ def test_apply_related_story_dates_uses_earliest_matched_article_date(
 
 def test_metadata_for_record_prefers_preservation_context() -> None:
     record = parse_index_csv(INDEX_CSV)[0]
+    record.date = "2019-10-10T12:00:00+00:00"
 
     md = metadata_for_record(record, collection="test-collection")
 
@@ -128,6 +130,8 @@ def test_metadata_for_record_prefers_preservation_context() -> None:
     assert md["creator"] == "FiveThirtyEight"
     assert md["contributor"] == "Ben Welsh"
     assert md["publisher"] == "FiveThirtyEight"
+    assert md["date"] == "2019-10-10T12:00:00+00:00"
+    assert md["year"] == "2019"
     assert md["title"] == "FiveThirtyEight Dataset: NBA Raptor"
     assert record.dataset_url in md["description"]
     assert "urn:fakethirtyeight:dataset:nba-raptor" in md["external-identifier"]
@@ -160,6 +164,7 @@ def test_upload_one_bundle_dry_run_never_requires_session(tmp_path: Path) -> Non
 class _FakeArchiveItem:
     def __init__(self) -> None:
         self.files: dict[str, str] = {}
+        self.metadata: dict[str, str] = {}
 
     def upload(
         self,
@@ -172,6 +177,14 @@ class _FakeArchiveItem:
     ) -> list[_FakeResponse]:
         self.files = files
         return [_FakeResponse()]
+
+    def modify_metadata(
+        self,
+        metadata: dict[str, str],
+        request_kwargs: dict[str, str] | None = None,
+    ) -> _FakeResponse:
+        self.metadata.update(metadata)
+        return _FakeResponse()
 
 
 class _FakeArchiveSession:
@@ -202,6 +215,21 @@ def test_upload_one_bundle_preserves_relative_remote_paths(tmp_path: Path) -> No
 
     assert result["status"] == "uploaded"
     assert sorted(session.item.files) == ["2024/README.md", "README.md"]
+
+
+def test_repair_one_dataset_year_patches_only_year_metadata() -> None:
+    record = parse_index_csv(INDEX_CSV)[0]
+    session = _FakeArchiveSession()
+
+    result = repair_one_dataset_year(
+        session,  # type: ignore[arg-type]
+        record,
+        year="2019",
+        dry_run=False,
+    )
+
+    assert result == {"status": "repaired", "error": ""}
+    assert session.item.metadata == {"year": "2019"}
 
 
 class _FakeResponse:

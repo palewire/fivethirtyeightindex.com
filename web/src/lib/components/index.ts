@@ -3,6 +3,8 @@ export { default as BylineTeaser } from './BylineTeaser.svelte';
 export { default as DatasetTable } from './DatasetTable.svelte';
 export { default as DatasetTeaser } from './DatasetTeaser.svelte';
 export { default as EntryList } from './EntryList.svelte';
+export { default as PodcastTable } from './PodcastTable.svelte';
+export { default as PodcastTeaser } from './PodcastTeaser.svelte';
 export { default as SearchBox } from './SearchBox.svelte';
 export { default as SiteFooter } from './SiteFooter.svelte';
 export { default as SiteHeader } from './SiteHeader.svelte';
