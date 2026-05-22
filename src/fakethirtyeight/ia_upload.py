@@ -571,6 +571,10 @@ def repair_one_podcast_year(
         )
         resp.raise_for_status()
     except Exception as exc:  # noqa: BLE001
+        if _is_noop_metadata_error(exc):
+            return MetadataRepairResult(
+                identifier=identifier, status="repaired", year=year
+            )
         return MetadataRepairResult(
             identifier=identifier,
             status="error",
@@ -578,6 +582,14 @@ def repair_one_podcast_year(
             error=repr(exc)[:300],
         )
     return MetadataRepairResult(identifier=identifier, status="repaired", year=year)
+
+
+def _is_noop_metadata_error(exc: Exception) -> bool:
+    """True when archive.org says the requested metadata is already present."""
+    response = getattr(exc, "response", None)
+    status_code = getattr(response, "status_code", None)
+    text = getattr(response, "text", "")
+    return status_code == 400 and "no changes to _meta.xml" in text
 
 
 def _load_repaired(log_path: Path) -> set[str]:

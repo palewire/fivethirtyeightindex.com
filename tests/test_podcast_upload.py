@@ -5,6 +5,7 @@ import gzip
 from pathlib import Path
 
 import pytest
+import requests
 
 from fakethirtyeight.download_podcasts import filename_for
 from fakethirtyeight.ia_upload import (
@@ -216,11 +217,27 @@ class _FakeArchiveItem:
         return _FakeResponse()
 
 
-class _FakeArchiveSession:
-    def __init__(self) -> None:
-        self.item = _FakeArchiveItem()
+class _NoopMetadataArchiveItem:
+    def modify_metadata(
+        self,
+        metadata: dict[str, str],
+        request_kwargs: dict[str, str] | None = None,
+    ) -> _FakeResponse:
+        response = requests.Response()
+        response.status_code = 400
+        response._content = b'{"success":false,"error":"no changes to _meta.xml"}'
+        error = requests.HTTPError("400 Client Error")
+        error.response = response
+        raise error
 
-    def get_item(self, identifier: str) -> _FakeArchiveItem:
+
+class _FakeArchiveSession:
+    def __init__(
+        self, item: _FakeArchiveItem | _NoopMetadataArchiveItem | None = None
+    ) -> None:
+        self.item = item or _FakeArchiveItem()
+
+    def get_item(self, identifier: str) -> _FakeArchiveItem | _NoopMetadataArchiveItem:
         return self.item
 
 
@@ -229,7 +246,8 @@ def test_repair_one_podcast_year_patches_only_year_metadata() -> None:
         "https://traffic.megaphone.fm/ESP1234567890.mp3",
         identifier="fivethirtyeight-politics-esp1234567890",
     )
-    session = _FakeArchiveSession()
+    item = _FakeArchiveItem()
+    session = _FakeArchiveSession(item)
 
     result = repair_one_podcast_year(
         session,  # type: ignore[arg-type]
@@ -240,7 +258,25 @@ def test_repair_one_podcast_year_patches_only_year_metadata() -> None:
 
     assert result.status == "repaired"
     assert result.identifier == "fivethirtyeight-politics-esp1234567890"
-    assert session.item.metadata == {"year": "2020"}
+    assert item.metadata == {"year": "2020"}
+
+
+def test_repair_one_podcast_year_treats_archive_noop_as_repaired() -> None:
+    row = _metadata_row(
+        "https://traffic.megaphone.fm/ESP1234567890.mp3",
+        identifier="fivethirtyeight-politics-esp1234567890",
+    )
+    session = _FakeArchiveSession(_NoopMetadataArchiveItem())
+
+    result = repair_one_podcast_year(
+        session,  # type: ignore[arg-type]
+        row,
+        year="2020",
+        dry_run=False,
+    )
+
+    assert result.status == "repaired"
+    assert result.error == ""
 
 
 def test_disambiguate_identifiers_suffixes_only_collisions() -> None:
