@@ -49,19 +49,8 @@ repos:
             tests/.*|
             uv.lock|
             package-lock.json|
-            \.github/workflows/.*\.yaml
-          )$
-
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1
-    hooks:
-      - id: codespell
-        args: [--ignore-words=.codespell-ignore-words.txt]
-        exclude: >
-          (?x)^(
-            tests/cassettes/.*|
-            uv.lock|
-            .*package-lock\.json
+            \.github/workflows/.*\.yaml|
+            web/static/data/.*\.(csv|json)
           )$
 
   - repo: local

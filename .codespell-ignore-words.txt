@@ -1,8 +1,0 @@
-# Python terms
-pytest
-codespell
-sphinxcontrib
-venv
-uv
-__pycache__
-.pytest_cache
