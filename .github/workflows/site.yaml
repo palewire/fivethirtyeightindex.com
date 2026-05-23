@@ -63,6 +63,7 @@ jobs:
         working-directory: web
         env:
           NODE_ENV: production
+          PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN: ${{ vars.CLOUDFLARE_WEB_ANALYTICS_TOKEN || secrets.CLOUDFLARE_WEB_ANALYTICS_TOKEN }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
