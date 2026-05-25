@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { PaginatedGraphicGrid, SearchBox } from '$lib/components';
-	import { monthLabel } from '$lib/data';
+	import { categoryLabel, graphicCategoryGroup, monthLabel } from '$lib/data';
 	import { base } from '$app/paths';
 	import type { Graphic } from '$lib/types';
 	import type { PageData } from './$types';
@@ -8,6 +8,7 @@
 	let { data }: { data: PageData } = $props();
 
 	let query = $state('');
+	let category = $state('');
 
 	function matches(graphic: Graphic, q: string): boolean {
 		const haystack = [
@@ -27,8 +28,27 @@
 
 	let filtered = $derived.by(() => {
 		const q = query.trim().toLowerCase();
-		if (!q) return data.graphics;
-		return data.graphics.filter((graphic) => matches(graphic, q));
+		return data.graphics.filter((graphic) => {
+			return (
+				(!category || graphicCategoryGroup(graphic.category) === category) &&
+				(!q || matches(graphic, q))
+			);
+		});
+	});
+
+	let categories = $derived.by(() => {
+		const byCategory = new Map<string, number>();
+		for (const graphic of data.graphics) {
+			const slug = graphicCategoryGroup(graphic.category);
+			byCategory.set(slug, (byCategory.get(slug) ?? 0) + 1);
+		}
+		return [...byCategory.entries()]
+			.map(([slug, count]) => ({ slug, name: categoryLabel(slug), count }))
+			.sort((a, b) => {
+				if (a.slug === 'infographic' && b.slug !== 'infographic') return 1;
+				if (b.slug === 'infographic' && a.slug !== 'infographic') return -1;
+				return a.name.localeCompare(b.name);
+			});
 	});
 </script>
 
@@ -43,6 +63,23 @@
 	<nav class="month-nav" aria-label="Jump to a month">
 		{#each data.months as ym (ym)}
 			<a href="{base}/graphics/year/{data.year}/{ym.slice(5)}/">{monthLabel(ym.slice(5))}</a>
+		{/each}
+	</nav>
+{/if}
+
+{#if categories.length > 1}
+	<nav class="category-nav" aria-label="Filter graphics by type">
+		<button class:active={category === ''} type="button" onclick={() => (category = '')}>
+			All
+		</button>
+		{#each categories as c (c.slug)}
+			<button
+				class:active={category === c.slug}
+				type="button"
+				onclick={() => (category = c.slug)}
+			>
+				{c.name} <span>{c.count.toLocaleString()}</span>
+			</button>
 		{/each}
 	</nav>
 {/if}
@@ -70,6 +107,34 @@
 		gap: 0.25rem 0.75rem;
 		margin: 0 0 0.75rem;
 		font-size: 0.9rem;
+	}
+
+	.category-nav {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem 0.5rem;
+		margin: 0 0 0.75rem;
+		font-size: var(--font-size-table);
+	}
+
+	.category-nav button {
+		border: var(--rule-thin);
+		border-radius: 4px;
+		background: var(--color-bg);
+		color: var(--color-link);
+		font: inherit;
+		padding: 0.25rem 0.45rem;
+		cursor: pointer;
+	}
+
+	.category-nav button:hover,
+	.category-nav button.active {
+		color: var(--color-fg);
+		border-color: var(--color-fg);
+	}
+
+	.category-nav span {
+		color: var(--color-muted);
 	}
 
 	.graphics-summary {
