@@ -27,7 +27,7 @@ import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
 
 from fakethirtyeight.ai2html import AI2HTML_REFS_FILE
 from fakethirtyeight.caption import CAPTIONS_FILE, infer_caption_category
@@ -66,7 +66,7 @@ PODCAST_UPLOAD_LOG = DATA_DIR / "podcast_upload_log.csv"
 IMAGE_UPLOAD_LOG = DATA_DIR / "image_upload_log.csv"
 HTML_GRAPHIC_UPLOAD_LOG = DATA_DIR / "html_graphic_upload_log.csv"
 ARCHIVE_ITEM_BASE_URL = "https://archive.org/details"
-ARCHIVE_DOWNLOAD_BASE_URL = "https://archive.org/download"
+ARCHIVE_THUMBNAIL_BASE_URL = "https://archive.org/services/img"
 HTML_GRAPHIC_CATEGORY = "html-bundle"
 SITE_GRAPHIC_CATEGORIES = frozenset(
     ["chart", "map", "table", "chart-screenshot", "infographic"]
@@ -260,6 +260,11 @@ class GraphicRecord:
             "description": self.description,
             "text": self.text,
         }
+
+
+def _archive_thumbnail_url(identifier: str) -> str:
+    """Archive.org-generated thumbnail URL for an uploaded item."""
+    return f"{ARCHIVE_THUMBNAIL_BASE_URL}/{identifier}"
 
 
 def build(
@@ -631,11 +636,7 @@ def _load_site_image_set(
         file_name = (
             upload.get("file") or Path(image.get("file_path") or "").name
         ).strip()
-        thumbnail_url = (
-            f"{ARCHIVE_DOWNLOAD_BASE_URL}/{identifier}/{quote(file_name)}"
-            if file_name
-            else ""
-        )
+        thumbnail_url = _archive_thumbnail_url(identifier) if file_name else ""
         date = _normalize_site_date(ref.get("published_at") or "")
         records.append(
             GraphicRecord(
@@ -722,11 +723,7 @@ def _load_site_html_graphics(
         ).strip()
         files = _split_upload_files(upload.get("files") or "")
         png_file = next((file for file in files if file.lower().endswith(".png")), "")
-        thumbnail_url = (
-            f"{ARCHIVE_DOWNLOAD_BASE_URL}/{identifier}/{quote(png_file)}"
-            if png_file
-            else ""
-        )
+        thumbnail_url = _archive_thumbnail_url(identifier) if png_file else ""
         date = _normalize_site_date(ref.get("published_at") or "")
         title = _html_graphic_title(ref, canonical_url)
         description = (ref.get("caption") or ref.get("title") or "").strip()
