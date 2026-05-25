@@ -38,7 +38,7 @@
 {#if filtered.length === 0}
 	<p class="no-results">No matches.</p>
 {:else}
-	<EntryList entries={filtered} sortable={true} />
+	<EntryList entries={filtered} sortable={true} pageSize={250} />
 {/if}
 
 <style>

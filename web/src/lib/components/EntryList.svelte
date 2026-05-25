@@ -7,14 +7,17 @@
 		entries: Entry[];
 		showByline?: boolean;
 		sortable?: boolean;
+		pageSize?: number | null;
 	}
 
 	type SortKey = 'date' | 'title' | 'byline';
 	type SortDirection = 'asc' | 'desc';
 
-	let { entries, showByline = true, sortable = false }: Props = $props();
+	let { entries, showByline = true, sortable = false, pageSize = null }: Props = $props();
 	let sortKey = $state<SortKey | null>(null);
 	let sortDirection = $state<SortDirection>('asc');
+	// svelte-ignore state_referenced_locally
+	let visibleCount = $state(pageSize ?? Number.POSITIVE_INFINITY);
 
 	const textCollator = new Intl.Collator(undefined, { sensitivity: 'base' });
 
@@ -69,6 +72,19 @@
 		});
 		return decorated.map(({ entry }) => entry);
 	});
+
+	let visibleEntries = $derived(sortedEntries.slice(0, visibleCount));
+	let hasMore = $derived(visibleCount < sortedEntries.length);
+
+	$effect(() => {
+		entries;
+		visibleCount = pageSize ?? Number.POSITIVE_INFINITY;
+	});
+
+	function showMore(): void {
+		if (!pageSize) return;
+		visibleCount = Math.min(visibleCount + pageSize, sortedEntries.length);
+	}
 </script>
 
 <table class="entries">
@@ -154,7 +170,7 @@
 		</tr>
 	</thead>
 	<tbody>
-		{#each sortedEntries as entry (entry.id)}
+		{#each visibleEntries as entry (entry.id)}
 			<tr>
 				<td class="c-date">
 					<time datetime={entry.date}>{fmtDate(entry.date)}</time>
@@ -177,3 +193,44 @@
 		{/each}
 	</tbody>
 </table>
+
+{#if hasMore}
+	<div class="pagination">
+		<p>
+			Showing {visibleEntries.length.toLocaleString()} of {sortedEntries.length.toLocaleString()}
+		</p>
+		<button type="button" onclick={showMore}>Load more</button>
+	</div>
+{/if}
+
+<style>
+	.pagination {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.45rem;
+		margin: 0.5rem 0 var(--space-lg);
+		color: var(--color-muted);
+		font-size: var(--font-size-table);
+	}
+
+	.pagination p {
+		margin: 0;
+	}
+
+	.pagination button {
+		border: var(--rule-thin);
+		border-radius: 4px;
+		background: var(--color-bg);
+		color: var(--color-link);
+		font: inherit;
+		padding: 0.3rem 0.55rem;
+		cursor: pointer;
+	}
+
+	.pagination button:hover {
+		color: var(--color-fg);
+		border-color: var(--color-fg);
+	}
+</style>
