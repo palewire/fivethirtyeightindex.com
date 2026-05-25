@@ -16,19 +16,19 @@ FiveThirtyEight used two ai2html shapes:
 
 from __future__ import annotations
 
-import csv
 import base64
+import csv
 import gzip
 import hashlib
 import html
 import logging
 import mimetypes
+import re
 import shutil
 import subprocess
 import tempfile
-import time
-import re
 import threading
+import time
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urljoin, urlparse, urlunparse
 
@@ -329,7 +329,9 @@ def extract_references(
 
 
 def _hash(canonical_url: str) -> str:
-    return hashlib.sha1(canonical_url.encode("utf-8"), usedforsecurity=False).hexdigest()
+    return hashlib.sha1(
+        canonical_url.encode("utf-8"), usedforsecurity=False
+    ).hexdigest()
 
 
 def path_for(canonical_url: str, base: Path = AI2HTML_DIR) -> Path:
@@ -417,7 +419,9 @@ def _try_fetch(
         return None, None, f"live: {live_err}; wayback: {repr(wb_exc)[:80]}"
 
 
-def _logged_file_is_ai2html(row: dict[str, str], *, root: Path = DATA_DIR.parent) -> bool:
+def _logged_file_is_ai2html(
+    row: dict[str, str], *, root: Path = DATA_DIR.parent
+) -> bool:
     path = row.get("file_path") or ""
     if not path:
         return False
@@ -804,7 +808,7 @@ def _render_one(
             f"--screenshot={out_path}",
             html_path.as_uri(),
         ]
-        proc = subprocess.Popen(
+        proc = subprocess.Popen(  # noqa: S603 - command is built from local executable and paths.
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

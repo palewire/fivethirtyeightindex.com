@@ -6,7 +6,9 @@ from fakethirtyeight.caption_review import build_review
 from fakethirtyeight.images import LOG_FIELDS, REF_FIELDS
 
 
-def _write_csv(path: Path, fieldnames: tuple[str, ...], rows: list[dict[str, str]]) -> None:
+def _write_csv(
+    path: Path, fieldnames: tuple[str, ...], rows: list[dict[str, str]]
+) -> None:
     with path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
         writer.writeheader()

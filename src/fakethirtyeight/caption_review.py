@@ -101,12 +101,14 @@ def _rows(
         # success yet, prefer the latest meaningful model/input error over a
         # later transient retry-environment error.
         current = captions_by_id.get(ident)
-        if (caption.get("status") or "") == "ok" or not current:
-            captions_by_id[ident] = caption
-        elif (
-            (current.get("status") or "") != "ok"
-            and _is_transient_error(current)
-            and not _is_transient_error(caption)
+        if (
+            (caption.get("status") or "") == "ok"
+            or not current
+            or (
+                (current.get("status") or "") != "ok"
+                and _is_transient_error(current)
+                and not _is_transient_error(caption)
+            )
         ):
             captions_by_id[ident] = caption
         elif (

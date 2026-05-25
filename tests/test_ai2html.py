@@ -72,7 +72,9 @@ def test_extract_one_finds_inline_generated_ai2html_block() -> None:
     assert rows[0]["title"] == "vote shift state maps"
 
 
-def test_load_done_ignores_logged_non_ai2html_files(tmp_path: Path, monkeypatch) -> None:
+def test_load_done_ignores_logged_non_ai2html_files(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = tmp_path
     ok = root / "ok.html"
     ok.write_text(
@@ -171,7 +173,10 @@ def test_render_source_html_wraps_inline_fragment() -> None:
     )
 
     assert "<!doctype html>" in wrapped
-    assert '<base href="https://fivethirtyeight.com/wp-content/uploads/2023/04/chart.html">' in wrapped
+    assert (
+        '<base href="https://fivethirtyeight.com/wp-content/uploads/2023/04/chart.html">'
+        in wrapped
+    )
     assert "max-width: 1000px" in wrapped
 
 

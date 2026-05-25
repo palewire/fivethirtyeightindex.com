@@ -228,7 +228,9 @@ def _description_for(graphic: HtmlGraphic) -> str:
         elif title:
             bits.append(f'Originally embedded in "{title}": {graphic.article_url}')
         elif byline:
-            bits.append(f"Originally embedded in an article by {byline}: {graphic.article_url}")
+            bits.append(
+                f"Originally embedded in an article by {byline}: {graphic.article_url}"
+            )
         else:
             bits.append(f"Originally embedded in: {graphic.article_url}")
 
@@ -239,7 +241,9 @@ def _description_for(graphic: HtmlGraphic) -> str:
 
 def _external_identifiers_for(graphic: HtmlGraphic) -> list[str]:
     out: list[str] = []
-    _append_unique(out, f"urn:fakethirtyeight:{graphic.bundle_kind}:{graphic.identifier}")
+    _append_unique(
+        out, f"urn:fakethirtyeight:{graphic.bundle_kind}:{graphic.identifier}"
+    )
     _append_unique(
         out,
         f"urn:fakethirtyeight:html-source-url:{graphic.canonical_url}",
@@ -311,7 +315,9 @@ def _manifest(
         bundle_kind = ref["bundle_kind"]
         download = downloads[bundle_kind].get(canonical, {})
         render = renders[bundle_kind].get(canonical, {})
-        if (download.get("status") or "") != "ok" or (render.get("status") or "") != "ok":
+        if (download.get("status") or "") != "ok" or (
+            render.get("status") or ""
+        ) != "ok":
             continue
         html_path = _as_path(download.get("file_path") or "")
         png_path = _as_path(render.get("render_path") or "")
@@ -410,7 +416,11 @@ def upload_html_graphics(
     ensure_dirs()
     auth = ("", "") if dry_run else _load_credentials()
     done = _load_done(log_path)
-    pending = [graphic for graphic in _manifest(enriched_path=enriched_path) if graphic.identifier not in done]
+    pending = [
+        graphic
+        for graphic in _manifest(enriched_path=enriched_path)
+        if graphic.identifier not in done
+    ]
     if limit is not None:
         pending = pending[:limit]
         log.info("limit=%d, processing %d", limit, len(pending))
@@ -447,7 +457,9 @@ def upload_html_graphics(
                 skipped += 1
             else:
                 failed += 1
-            log.info("[%d/%d] %s — %s", index, len(pending), result.status, result.identifier)
+            log.info(
+                "[%d/%d] %s — %s", index, len(pending), result.status, result.identifier
+            )
             if delay > 0 and not dry_run:
                 time.sleep(delay)
     return uploaded, skipped, failed

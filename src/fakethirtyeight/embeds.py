@@ -13,14 +13,14 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse, urlunparse
 
 import httpx
+from bs4 import BeautifulSoup
+from bs4.element import Tag
 from tenacity import (
     retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
 )
-from bs4 import BeautifulSoup
-from bs4.element import Tag
 from tqdm import tqdm
 from tqdm.contrib.concurrent import thread_map
 
@@ -106,7 +106,9 @@ def identifier_for(canonical_url: str) -> str:
 
 
 def _hash(canonical_url: str) -> str:
-    return hashlib.sha1(canonical_url.encode("utf-8"), usedforsecurity=False).hexdigest()
+    return hashlib.sha1(
+        canonical_url.encode("utf-8"), usedforsecurity=False
+    ).hexdigest()
 
 
 def path_for(canonical_url: str, base: Path = EMBED_DIR) -> Path:
@@ -285,7 +287,9 @@ def _extract_one(
         for match in _PYM_PARENT_RE.finditer(script_text):
             child_id = _decode_js_string(match.group("child"))
             raw_url = _decode_js_string(match.group("url"))
-            title_match = _JS_TITLE_RE.search(script_text[match.end() : match.end() + 500])
+            title_match = _JS_TITLE_RE.search(
+                script_text[match.end() : match.end() + 500]
+            )
             title = _decode_js_string(title_match.group("title")) if title_match else ""
             placeholder = placeholders.get(child_id)
             if _is_sidebar_embed(placeholder):
@@ -426,8 +430,10 @@ def _try_fetch(
         text, ct = _stream_html(client, wb)
         if text and _is_html_body(text, ct):
             return text, ct, "wayback"
-        return None, None, (
-            f"live: {live_err}; wayback: non-html response: {ct or 'unknown'}"
+        return (
+            None,
+            None,
+            (f"live: {live_err}; wayback: non-html response: {ct or 'unknown'}"),
         )
     except Exception as wb_exc:  # noqa: BLE001
         return None, None, f"live: {live_err}; wayback: {repr(wb_exc)[:80]}"

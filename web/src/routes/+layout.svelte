@@ -11,7 +11,7 @@
 	const SOCIAL_IMAGE = `${SITE_URL}/abacus.png`;
 	const SOCIAL_TITLE = 'fivethirtyeightindex.com';
 	const SOCIAL_DESCRIPTION =
-		'An index of fivethirtyeight.com articles, datasets, podcasts, graphics, and illustrations preserved by the Internet Archive.';
+		'An index of fivethirtyeight.com articles, datasets, podcasts, graphics and illustrations.';
 	const CLOUDFLARE_TOKEN = env.PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN || '';
 	const CLOUDFLARE_BEACON = JSON.stringify({
 		token: CLOUDFLARE_TOKEN
