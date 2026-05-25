@@ -32,19 +32,25 @@ import logging
 import os
 import time
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, TextIO
 
 from internetarchive import get_session
 
-from fakethirtyeight.caption import CAPTIONS_FILE, IN_SCOPE_AI_CATEGORIES
+from fakethirtyeight.caption import (
+    CAPTIONS_FILE,
+    IN_SCOPE_AI_CATEGORIES,
+    infer_caption_category,
+)
 from fakethirtyeight.enrich import ENRICHED_FILE
 from fakethirtyeight.ia_metadata import year_from_date
 from fakethirtyeight.images import (
     IMAGE_LOG,
     IMAGE_REFS_FILE,
+    _logged_file_is_image,
     identifier_for,
 )
 from fakethirtyeight.paths import DATA_DIR, ensure_dirs
@@ -66,8 +72,9 @@ LOG_FIELDS = (
 
 #: Default IA collection slug for the FiveThirtyEight archive.
 DEFAULT_COLLECTION = "fivethirtyeight-collection"
+DEFAULT_PUBLISHER = "FiveThirtyEight"
 
-#: Per-category subject tags. Every uploaded item also carries the
+#: Per-category subject tags. Most uploaded items also carry the
 #: catch-all ``graphic`` and the brand ``FiveThirtyEight`` subjects so
 #: search-by-tag works even if a future caller drops the category.
 #: ``category`` values come from :func:`fakethirtyeight.images._categorize`.
@@ -75,7 +82,11 @@ _CATEGORY_SUBJECTS: dict[str, tuple[str, ...]] = {
     "chart": ("chart",),
     "map": ("map",),
     "table": ("table",),
-    "chart-screenshot": ("chart", "screenshot"),
+    "chart-screenshot": ("chart",),
+    "infographic": (),
+    "diagram": (),
+    "chess-diagram": ("chess",),
+    "artistic-illustration": ("illustration",),
     "featured-image": ("featured-image",),
     "banner": ("banner",),
     "screenshot": ("screenshot",),
@@ -90,6 +101,10 @@ DEFAULT_SUBJECTS = ("graphic", "FiveThirtyEight")
 #: item so the upload is attributable on archive.org even though the
 #: ``creator`` field holds the original author of the host article.
 DEFAULT_CONTRIBUTOR = "Ben Welsh"
+AI_DISCLOSURE = (
+    "AI disclosure: Image descriptions and visible-text extraction were generated "
+    "using Sonnet 4.6 by Anthropic."
+)
 
 
 class _UploadResponse(Protocol):
@@ -108,7 +123,22 @@ class _ArchiveItem(Protocol):
 
 
 class _ArchiveSession(Protocol):
+    verify: bool | str
+
     def get_item(self, identifier: str) -> _ArchiveItem: ...
+
+
+def _configure_session_tls(session: _ArchiveSession) -> None:
+    """Teach internetarchive's requests session about local corporate CAs."""
+    ca_bundle = os.environ.get("REQUESTS_CA_BUNDLE") or os.environ.get("SSL_CERT_FILE")
+    if ca_bundle:
+        session.verify = ca_bundle
+
+
+def _archive_session(access: str, secret: str) -> _ArchiveSession:
+    session = get_session(config={"s3": {"access": access, "secret": secret}})
+    _configure_session_tls(session)
+    return session
 
 
 @dataclass(slots=True, frozen=True)
@@ -195,7 +225,12 @@ def _load_captions(captions_path: Path) -> dict[str, dict[str, str]]:
             if not ident or (row.get("status") or "") != "ok":
                 continue
             out[ident] = {
-                "ai_category": row.get("ai_category") or "",
+                "ai_category": infer_caption_category(
+                    row.get("ai_category") or "",
+                    title=row.get("ai_title") or "",
+                    description=row.get("ai_description") or "",
+                    text=row.get("ai_text") or "",
+                ),
                 "ai_description": row.get("ai_description") or "",
                 "ai_title": row.get("ai_title") or "",
                 "ai_text": row.get("ai_text") or "",
@@ -227,7 +262,39 @@ def _in_scope_for_upload(rec: dict[str, str]) -> bool:
     # Screenshots are ambiguous until the vision pass says they are a
     # data visualization. Filename-classified charts can still upload
     # without AI captions.
-    return category in {"chart", "map", "table", "chart-screenshot"}
+    return category in {
+        "artistic-illustration",
+        "chart",
+        "map",
+        "table",
+        "chart-screenshot",
+        "infographic",
+        "diagram",
+        "chess-diagram",
+    }
+
+
+def _pending_upload_rows(
+    rows: list[dict[str, str]],
+    *,
+    done: set[str],
+    article_meta: dict[str, dict[str, str]],
+    captions: dict[str, dict[str, str]],
+) -> list[tuple[dict[str, str], dict[str, str]]]:
+    """Return not-yet-uploaded rows that are in scope for IA image upload."""
+    pending: list[tuple[dict[str, str], dict[str, str]]] = []
+    for row in rows:
+        canonical_url = row["canonical_url"]
+        identifier = identifier_for(canonical_url)
+        if identifier in done:
+            continue
+        rec = _merge_caption(
+            article_meta.get(canonical_url, {}),
+            captions.get(identifier),
+        )
+        if _in_scope_for_upload(rec):
+            pending.append((row, rec))
+    return pending
 
 
 # ---------------------------------------------------------------------------
@@ -243,9 +310,26 @@ def _subjects_for(rec: dict[str, str]) -> list[str]:
     # Always include the catch-all asset-kind tag + the brand so a
     # collection-wide query (``subject:graphic``, ``subject:FiveThirtyEight``)
     # still surfaces every item.
-    if "graphic" not in out:
+    if cat not in {"artistic-illustration", "chess-diagram"} and "graphic" not in out:
         out.append("graphic")
     out.append("FiveThirtyEight")
+    return out
+
+
+def _append_unique(values: list[str], value: str) -> None:
+    value = value.strip()
+    if value and value not in values:
+        values.append(value)
+
+
+def _external_identifiers_for(canonical_url: str, rec: dict[str, str]) -> list[str]:
+    """Build repeatable external identifiers for source-system lookups."""
+    out: list[str] = []
+    _append_unique(out, f"urn:fakethirtyeight:image:{identifier_for(canonical_url)}")
+    _append_unique(out, f"urn:fakethirtyeight:image-source-url:{canonical_url}")
+    article_url = (rec.get("article_url") or "").strip()
+    if article_url:
+        _append_unique(out, f"urn:fakethirtyeight:source-article-url:{article_url}")
     return out
 
 
@@ -273,13 +357,13 @@ def _description_for(rec: dict[str, str], canonical_url: str) -> str:
     bits: list[str] = []
     ai_description = (rec.get("ai_description") or "").strip()
     if ai_description:
-        bits.append(ai_description)
+        bits.append(f"AI-generated image description: {ai_description}")
     caption = (rec.get("caption") or "").strip()
     if caption and caption != ai_description:
-        bits.append(caption)
+        bits.append(f"Original caption: {caption}")
     ai_text = (rec.get("ai_text") or "").strip()
     if ai_text:
-        bits.append(f"Text visible in image:\n{ai_text}")
+        bits.append(f"AI-extracted visible text:\n{ai_text}")
     article_url = (rec.get("article_url") or "").strip()
     article_title = (rec.get("article_title") or "").strip()
     byline = clean_byline(rec.get("byline") or "")
@@ -298,6 +382,8 @@ def _description_for(rec: dict[str, str], canonical_url: str) -> str:
     elif byline:
         bits.append(f"From an article by {byline}.")
     bits.append(f"Original source URL: {canonical_url}")
+    if ai_description or ai_text:
+        bits.append(AI_DISCLOSURE)
     return "\n\n".join(bits)
 
 
@@ -317,10 +403,12 @@ def _metadata_for(
         # in `description` instead.
         "creator": "FiveThirtyEight",
         "contributor": contributor,
+        "publisher": DEFAULT_PUBLISHER,
         "description": _description_for(rec, canonical_url),
         "subject": _subjects_for(rec),
         "source": canonical_url,
         "language": "eng",
+        "external-identifier": _external_identifiers_for(canonical_url, rec),
     }
     date = (rec.get("published_at") or "").strip()
     if date:
@@ -361,6 +449,19 @@ def _load_done(log_path: Path) -> set[str]:
     return out
 
 
+def _has_uploadable_content_type(row: dict[str, str]) -> bool:
+    """Return False for clear HTML/text downloads saved as image files."""
+    content_type = (row.get("content_type") or "").split(";", 1)[0].strip().lower()
+    if content_type.startswith("image/"):
+        return True
+    if not content_type or content_type == "application/octet-stream":
+        return True
+    return not (
+        content_type.startswith("text/")
+        or content_type in {"application/html", "application/xhtml+xml"}
+    )
+
+
 def _iter_image_rows(image_log_path: Path) -> Iterable[dict[str, str]]:
     """Yield rows from the image download log that successfully saved a file."""
     with image_log_path.open(newline="", encoding="utf-8") as fh:
@@ -368,6 +469,10 @@ def _iter_image_rows(image_log_path: Path) -> Iterable[dict[str, str]]:
             if (row.get("status") or "") != "ok":
                 continue
             if not (row.get("file_path") or "").strip():
+                continue
+            if not _has_uploadable_content_type(row):
+                continue
+            if not _logged_file_is_image(row):
                 continue
             yield row
 
@@ -448,6 +553,7 @@ def upload_images(
     collection: str = DEFAULT_COLLECTION,
     contributor: str = DEFAULT_CONTRIBUTOR,
     delay: float = 0.5,
+    workers: int = 1,
     limit: int | None = None,
     dry_run: bool = False,
     image_log_path: Path = IMAGE_LOG,
@@ -487,70 +593,125 @@ def upload_images(
 
     done = _load_done(log_path)
     rows = list(_iter_image_rows(image_log_path))
-    pending = [r for r in rows if identifier_for(r["canonical_url"]) not in done]
+    not_done = [r for r in rows if identifier_for(r["canonical_url"]) not in done]
+    pending = _pending_upload_rows(
+        rows,
+        done=done,
+        article_meta=article_meta,
+        captions=captions,
+    )
+    excluded = len(not_done) - len(pending)
     log.info(
-        "%d images on disk; %d already uploaded; %d to upload",
+        "%d images on disk; %d already uploaded; %d out of scope; %d to upload",
         len(rows),
         len(done),
+        excluded,
         len(pending),
     )
     if limit is not None:
         pending = pending[:limit]
         log.info("limit=%d, processing %d", limit, len(pending))
 
-    session = get_session(config={"s3": {"access": auth[0], "secret": auth[1]}})
-
     write_header = not log_path.exists()
     uploaded = skipped = failed = 0
+
+    def run_upload(row: dict[str, str], rec: dict[str, str]) -> UploadResult:
+        canonical_url = row["canonical_url"]
+        file_path = DATA_DIR.parent / row["file_path"]
+        session = _archive_session(auth[0], auth[1])
+        return upload_one(
+            session,
+            canonical_url=canonical_url,
+            file_path=file_path,
+            rec=rec,
+            collection=collection,
+            contributor=contributor,
+            dry_run=dry_run,
+        )
+
+    def record_result(
+        writer: csv.DictWriter,
+        fh: TextIO,
+        result: UploadResult,
+        *,
+        index: int,
+        total: int,
+    ) -> None:
+        nonlocal uploaded, skipped, failed
+        writer.writerow(
+            {
+                "identifier": result.identifier,
+                "canonical_url": result.canonical_url,
+                "uploaded_at": datetime.now(UTC).isoformat(timespec="seconds"),
+                "status": result.status,
+                "file": result.file,
+                "error": result.error,
+            }
+        )
+        fh.flush()
+
+        if result.status == "uploaded":
+            uploaded += 1
+        elif result.status == "skipped":
+            skipped += 1
+        else:
+            failed += 1
+
+        log.info(
+            "[%d/%d] %s — %s",
+            index,
+            total,
+            result.status,
+            result.identifier,
+        )
 
     with log_path.open("a", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=LOG_FIELDS)
         if write_header:
             writer.writeheader()
 
-        for i, row in enumerate(pending, 1):
-            canonical_url = row["canonical_url"]
-            file_path = DATA_DIR.parent / row["file_path"]
-            rec = _merge_caption(
-                article_meta.get(canonical_url, {}),
-                captions.get(identifier_for(canonical_url)),
-            )
-            result = upload_one(
-                session,
-                canonical_url=canonical_url,
-                file_path=file_path,
-                rec=rec,
-                collection=collection,
-                contributor=contributor,
-                dry_run=dry_run,
-            )
-            writer.writerow(
-                {
-                    "identifier": result.identifier,
-                    "canonical_url": result.canonical_url,
-                    "uploaded_at": datetime.now(UTC).isoformat(timespec="seconds"),
-                    "status": result.status,
-                    "file": result.file,
-                    "error": result.error,
+        if workers <= 1:
+            session = _archive_session(auth[0], auth[1])
+            for i, (row, rec) in enumerate(pending, 1):
+                canonical_url = row["canonical_url"]
+                file_path = DATA_DIR.parent / row["file_path"]
+                result = upload_one(
+                    session,
+                    canonical_url=canonical_url,
+                    file_path=file_path,
+                    rec=rec,
+                    collection=collection,
+                    contributor=contributor,
+                    dry_run=dry_run,
+                )
+                record_result(writer, fh, result, index=i, total=len(pending))
+                if delay > 0 and not dry_run:
+                    time.sleep(delay)
+        else:
+            log.info("uploading with %d worker(s)", workers)
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                future_to_index = {
+                    executor.submit(run_upload, row, rec): i
+                    for i, (row, rec) in enumerate(pending, 1)
                 }
-            )
-            fh.flush()
-
-            if result.status == "uploaded":
-                uploaded += 1
-            elif result.status == "skipped":
-                skipped += 1
-            else:
-                failed += 1
-
-            log.info(
-                "[%d/%d] %s — %s",
-                i,
-                len(pending),
-                result.status,
-                result.identifier,
-            )
-            if delay > 0 and not dry_run:
-                time.sleep(delay)
+                for completed, future in enumerate(as_completed(future_to_index), 1):
+                    index = future_to_index[future]
+                    try:
+                        result = future.result()
+                    except Exception as exc:  # noqa: BLE001
+                        row, _ = pending[index - 1]
+                        result = UploadResult(
+                            identifier=identifier_for(row["canonical_url"]),
+                            canonical_url=row["canonical_url"],
+                            status="error",
+                            error=repr(exc)[:300],
+                        )
+                    record_result(
+                        writer,
+                        fh,
+                        result,
+                        index=completed,
+                        total=len(pending),
+                    )
 
     return uploaded, skipped, failed

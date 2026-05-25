@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { env } from '$env/dynamic/public';
 	import type { Snippet } from 'svelte';
 	import '../app.css';
 	import { SiteFooter, SiteHeader, Tagline } from '$lib/components';
@@ -10,7 +11,11 @@
 	const SOCIAL_IMAGE = `${SITE_URL}/abacus.png`;
 	const SOCIAL_TITLE = 'fivethirtyeightindex.com';
 	const SOCIAL_DESCRIPTION =
-		'An index of every fivethirtyeight.com article preserved by the Internet Archive.';
+		'An index of fivethirtyeight.com articles, datasets, podcasts, graphics, and illustrations preserved by the Internet Archive.';
+	const CLOUDFLARE_TOKEN = env.PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN || '';
+	const CLOUDFLARE_BEACON = JSON.stringify({
+		token: CLOUDFLARE_TOKEN
+	});
 </script>
 
 <svelte:head>
@@ -23,6 +28,13 @@
 	<meta name="twitter:title" content={SOCIAL_TITLE} />
 	<meta name="twitter:description" content={SOCIAL_DESCRIPTION} />
 	<meta name="twitter:image" content={SOCIAL_IMAGE} />
+	{#if CLOUDFLARE_TOKEN}
+		<script
+			defer
+			src="https://static.cloudflareinsights.com/beacon.min.js"
+			data-cf-beacon={CLOUDFLARE_BEACON}
+		></script>
+	{/if}
 </svelte:head>
 
 <div class="page">

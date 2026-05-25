@@ -27,8 +27,10 @@ import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
+from fakethirtyeight.ai2html import AI2HTML_REFS_FILE
+from fakethirtyeight.caption import CAPTIONS_FILE, infer_caption_category
 from fakethirtyeight.classify import (
     KIND_ARTICLE,
     KIND_LIVEBLOG,
@@ -40,7 +42,9 @@ from fakethirtyeight.classify import (
 )
 from fakethirtyeight.curate import CURATED_FILE
 from fakethirtyeight.datasets import write_site_datasets
+from fakethirtyeight.embeds import EMBED_REFS_FILE
 from fakethirtyeight.enrich import ENRICHED_FILE, load_enriched
+from fakethirtyeight.images import IMAGE_LOG, IMAGE_REFS_FILE
 from fakethirtyeight.metadata import _clean_title
 from fakethirtyeight.paths import DATA_DIR
 
@@ -51,11 +55,23 @@ SITE_CSV_FILE = Path("web/static/data/articles.csv")
 SITE_META_FILE = Path("web/static/data/articles-meta.json")
 SITE_PODCASTS_FILE = Path("web/static/data/podcasts.json")
 SITE_PODCASTS_META_FILE = Path("web/static/data/podcasts-meta.json")
+SITE_GRAPHICS_FILE = Path("web/static/data/graphics.json")
+SITE_GRAPHICS_META_FILE = Path("web/static/data/graphics-meta.json")
+SITE_ILLUSTRATIONS_FILE = Path("web/static/data/illustrations.json")
+SITE_ILLUSTRATIONS_META_FILE = Path("web/static/data/illustrations-meta.json")
 SITEMAP_FILE = Path("web/static/sitemap.xml")
 SITE_BASE_URL = "https://fivethirtyeightindex.com"
 PODCAST_METADATA_FILE = DATA_DIR / "podcast_metadata.csv"
 PODCAST_UPLOAD_LOG = DATA_DIR / "podcast_upload_log.csv"
+IMAGE_UPLOAD_LOG = DATA_DIR / "image_upload_log.csv"
+HTML_GRAPHIC_UPLOAD_LOG = DATA_DIR / "html_graphic_upload_log.csv"
 ARCHIVE_ITEM_BASE_URL = "https://archive.org/details"
+ARCHIVE_DOWNLOAD_BASE_URL = "https://archive.org/download"
+HTML_GRAPHIC_CATEGORY = "html-bundle"
+SITE_GRAPHIC_CATEGORIES = frozenset(
+    ["chart", "map", "table", "chart-screenshot", "infographic"]
+)
+SITE_ILLUSTRATION_CATEGORIES = frozenset(["artistic-illustration"])
 PODCAST_SERIES_NAMES: dict[str, str] = {
     "elections": "FiveThirtyEight Elections",
     "politics": "FiveThirtyEight Politics",
@@ -210,6 +226,42 @@ class PodcastRecord:
         }
 
 
+@dataclass(slots=True)
+class GraphicRecord:
+    id: str
+    title: str
+    date: str
+    year: int | None
+    category: str
+    url: str
+    thumbnail_url: str
+    source_url: str
+    article_url: str
+    article_title: str
+    byline: str
+    article_authors: list[str]
+    description: str
+    text: str
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "date": self.date,
+            "year": self.year,
+            "category": self.category,
+            "url": self.url,
+            "thumbnail_url": self.thumbnail_url,
+            "source_url": self.source_url,
+            "article_url": self.article_url,
+            "article_title": self.article_title,
+            "byline": self.byline,
+            "article_authors": self.article_authors,
+            "description": self.description,
+            "text": self.text,
+        }
+
+
 def build(
     *,
     curated_path: Path = CURATED_FILE,
@@ -295,6 +347,8 @@ def build(
     # the current dataset route list.
     write_site_datasets()
     podcasts = write_site_podcasts()
+    write_site_graphics()
+    write_site_illustrations()
 
     # Sitemap covers every prerendered route — homepage, byline index,
     # dataset index, one entry per year, and one entry per byline slug.
@@ -383,6 +437,560 @@ def _load_site_podcasts(
 
     records.sort(key=lambda r: (r.date or "￿", r.title))
     return records
+
+
+def write_site_graphics(
+    *,
+    upload_log_path: Path = IMAGE_UPLOAD_LOG,
+    html_upload_log_path: Path = HTML_GRAPHIC_UPLOAD_LOG,
+    image_log_path: Path = IMAGE_LOG,
+    refs_path: Path = IMAGE_REFS_FILE,
+    ai2html_refs_path: Path = AI2HTML_REFS_FILE,
+    embed_refs_path: Path = EMBED_REFS_FILE,
+    enriched_path: Path = ENRICHED_FILE,
+    captions_path: Path = CAPTIONS_FILE,
+    json_path: Path = SITE_GRAPHICS_FILE,
+    meta_path: Path = SITE_GRAPHICS_META_FILE,
+) -> list[GraphicRecord]:
+    """Write the static-site graphics JSON from uploaded IA image items."""
+    graphics = [
+        *_load_site_image_set(
+            upload_log_path=upload_log_path,
+            image_log_path=image_log_path,
+            refs_path=refs_path,
+            enriched_path=enriched_path,
+            captions_path=captions_path,
+            categories=SITE_GRAPHIC_CATEGORIES,
+        ),
+        *_load_site_html_graphics(
+            upload_log_path=html_upload_log_path,
+            ai2html_refs_path=ai2html_refs_path,
+            embed_refs_path=embed_refs_path,
+            enriched_path=enriched_path,
+        ),
+    ]
+    graphics.sort(key=lambda g: (g.date or "￿", g.title, g.id))
+
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    with json_path.open("w", encoding="utf-8") as fh:
+        json.dump([g.to_dict() for g in graphics], fh, ensure_ascii=False)
+
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    with meta_path.open("w", encoding="utf-8") as fh:
+        categories = sorted({g.category for g in graphics if g.category})
+        json.dump({"total": len(graphics), "categories": categories}, fh)
+
+    return graphics
+
+
+def _load_site_graphics(
+    *,
+    upload_log_path: Path = IMAGE_UPLOAD_LOG,
+    html_upload_log_path: Path = HTML_GRAPHIC_UPLOAD_LOG,
+    image_log_path: Path = IMAGE_LOG,
+    refs_path: Path = IMAGE_REFS_FILE,
+    ai2html_refs_path: Path = AI2HTML_REFS_FILE,
+    embed_refs_path: Path = EMBED_REFS_FILE,
+    enriched_path: Path = ENRICHED_FILE,
+    captions_path: Path = CAPTIONS_FILE,
+) -> list[GraphicRecord]:
+    """Return uploaded chart/map/table/infographic records for the site."""
+    graphics = [
+        *_load_site_image_set(
+            upload_log_path=upload_log_path,
+            image_log_path=image_log_path,
+            refs_path=refs_path,
+            enriched_path=enriched_path,
+            captions_path=captions_path,
+            categories=SITE_GRAPHIC_CATEGORIES,
+        ),
+        *_load_site_html_graphics(
+            upload_log_path=html_upload_log_path,
+            ai2html_refs_path=ai2html_refs_path,
+            embed_refs_path=embed_refs_path,
+            enriched_path=enriched_path,
+        ),
+    ]
+    graphics.sort(key=lambda g: (g.date or "￿", g.title, g.id))
+    return graphics
+
+
+def _load_site_static_graphics(
+    *,
+    upload_log_path: Path = IMAGE_UPLOAD_LOG,
+    image_log_path: Path = IMAGE_LOG,
+    refs_path: Path = IMAGE_REFS_FILE,
+    enriched_path: Path = ENRICHED_FILE,
+    captions_path: Path = CAPTIONS_FILE,
+) -> list[GraphicRecord]:
+    """Return uploaded static image graphic records for the site."""
+    return _load_site_image_set(
+        upload_log_path=upload_log_path,
+        image_log_path=image_log_path,
+        refs_path=refs_path,
+        enriched_path=enriched_path,
+        captions_path=captions_path,
+        categories=SITE_GRAPHIC_CATEGORIES,
+    )
+
+
+def write_site_illustrations(
+    *,
+    upload_log_path: Path = IMAGE_UPLOAD_LOG,
+    image_log_path: Path = IMAGE_LOG,
+    refs_path: Path = IMAGE_REFS_FILE,
+    enriched_path: Path = ENRICHED_FILE,
+    captions_path: Path = CAPTIONS_FILE,
+    json_path: Path = SITE_ILLUSTRATIONS_FILE,
+    meta_path: Path = SITE_ILLUSTRATIONS_META_FILE,
+) -> list[GraphicRecord]:
+    """Write the static-site illustration JSON from uploaded IA image items."""
+    illustrations = _load_site_illustrations(
+        upload_log_path=upload_log_path,
+        image_log_path=image_log_path,
+        refs_path=refs_path,
+        enriched_path=enriched_path,
+        captions_path=captions_path,
+    )
+
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    with json_path.open("w", encoding="utf-8") as fh:
+        json.dump([g.to_dict() for g in illustrations], fh, ensure_ascii=False)
+
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    with meta_path.open("w", encoding="utf-8") as fh:
+        json.dump({"total": len(illustrations)}, fh)
+
+    return illustrations
+
+
+def _load_site_illustrations(
+    *,
+    upload_log_path: Path = IMAGE_UPLOAD_LOG,
+    image_log_path: Path = IMAGE_LOG,
+    refs_path: Path = IMAGE_REFS_FILE,
+    enriched_path: Path = ENRICHED_FILE,
+    captions_path: Path = CAPTIONS_FILE,
+) -> list[GraphicRecord]:
+    """Return uploaded artistic illustration records for the site."""
+    return _load_site_image_set(
+        upload_log_path=upload_log_path,
+        image_log_path=image_log_path,
+        refs_path=refs_path,
+        enriched_path=enriched_path,
+        captions_path=captions_path,
+        categories=SITE_ILLUSTRATION_CATEGORIES,
+    )
+
+
+def _load_site_image_set(
+    *,
+    upload_log_path: Path,
+    image_log_path: Path,
+    refs_path: Path,
+    enriched_path: Path,
+    captions_path: Path,
+    categories: frozenset[str],
+) -> list[GraphicRecord]:
+    """Return uploaded image records whose AI category is in ``categories``."""
+    if not upload_log_path.exists():
+        return []
+
+    uploaded = _load_uploaded_image_rows(upload_log_path)
+    if not uploaded:
+        return []
+
+    images = _load_image_rows(image_log_path)
+    captions = _load_graphic_captions(captions_path)
+    refs = _load_graphic_article_meta(refs_path, enriched_path)
+
+    records: list[GraphicRecord] = []
+    for identifier, upload in uploaded.items():
+        image = images.get(identifier, {})
+        canonical_url = (
+            upload.get("canonical_url") or image.get("canonical_url") or ""
+        ).strip()
+        caption = captions.get(identifier, {})
+        ref = refs.get(identifier, {})
+        category = (caption.get("ai_category") or ref.get("category") or "").strip()
+        if category not in categories:
+            continue
+        title = _graphic_title(caption, ref, canonical_url)
+        description = (
+            caption.get("ai_description") or ref.get("caption") or ""
+        ).strip()
+        text = (caption.get("ai_text") or "").strip()
+        if _is_excluded_illustration_icon(
+            category=category,
+            title=title,
+            description=description,
+            source_url=canonical_url,
+        ):
+            continue
+
+        file_name = (
+            upload.get("file") or Path(image.get("file_path") or "").name
+        ).strip()
+        thumbnail_url = (
+            f"{ARCHIVE_DOWNLOAD_BASE_URL}/{identifier}/{quote(file_name)}"
+            if file_name
+            else ""
+        )
+        date = _normalize_site_date(ref.get("published_at") or "")
+        records.append(
+            GraphicRecord(
+                id=identifier,
+                title=title,
+                date=date,
+                year=_year_from_date(date),
+                category=category,
+                url=f"{ARCHIVE_ITEM_BASE_URL}/{identifier}",
+                thumbnail_url=thumbnail_url,
+                source_url=canonical_url,
+                article_url=ref.get("article_url") or "",
+                article_title=ref.get("article_title") or "",
+                byline=clean_byline(ref.get("byline") or ""),
+                article_authors=_split_authors(ref.get("byline") or ""),
+                description=description,
+                text=text,
+            )
+        )
+
+    records.sort(key=lambda g: (g.date or "￿", g.title, g.id))
+    return records
+
+
+def _is_excluded_illustration_icon(
+    *,
+    category: str,
+    title: str,
+    description: str,
+    source_url: str,
+) -> bool:
+    """Exclude tiny up/down triangle marker icons from illustration browsing."""
+    if category != "artistic-illustration":
+        return False
+
+    normalized_title = title.strip().lower()
+    triangle_icon_titles = {
+        "green triangle icon",
+        "green upward triangle icon",
+        "green up arrow triangle icon",
+        "red down arrow icon",
+        "red downward triangle icon",
+        "red downward triangle arrow icon",
+    }
+    if normalized_title not in triangle_icon_titles:
+        return False
+
+    basename = Path(urlparse(source_url).path).name.lower()
+    if re.fullmatch(r"(up|down)\d*\.gif", basename):
+        return True
+
+    normalized_description = description.strip().lower()
+    return "small" in normalized_description and (
+        "triangle" in normalized_description or "arrow" in normalized_description
+    )
+
+
+def _load_site_html_graphics(
+    *,
+    upload_log_path: Path = HTML_GRAPHIC_UPLOAD_LOG,
+    ai2html_refs_path: Path = AI2HTML_REFS_FILE,
+    embed_refs_path: Path = EMBED_REFS_FILE,
+    enriched_path: Path = ENRICHED_FILE,
+) -> list[GraphicRecord]:
+    """Return uploaded ai2html/embed HTML bundle records for Graphics pages."""
+    if not upload_log_path.exists():
+        return []
+
+    uploaded = _load_uploaded_html_graphic_rows(upload_log_path)
+    if not uploaded:
+        return []
+
+    refs = _load_html_graphic_article_meta(
+        ai2html_refs_path=ai2html_refs_path,
+        embed_refs_path=embed_refs_path,
+        enriched_path=enriched_path,
+    )
+
+    records: list[GraphicRecord] = []
+    for identifier, upload in uploaded.items():
+        ref = refs.get(identifier, {})
+        canonical_url = (
+            upload.get("canonical_url") or ref.get("canonical_url") or ""
+        ).strip()
+        files = _split_upload_files(upload.get("files") or "")
+        png_file = next((file for file in files if file.lower().endswith(".png")), "")
+        thumbnail_url = (
+            f"{ARCHIVE_DOWNLOAD_BASE_URL}/{identifier}/{quote(png_file)}"
+            if png_file
+            else ""
+        )
+        date = _normalize_site_date(ref.get("published_at") or "")
+        title = _html_graphic_title(ref, canonical_url)
+        description = (ref.get("caption") or ref.get("title") or "").strip()
+        records.append(
+            GraphicRecord(
+                id=identifier,
+                title=title,
+                date=date,
+                year=_year_from_date(date),
+                category=_html_graphic_category(ref, canonical_url),
+                url=f"{ARCHIVE_ITEM_BASE_URL}/{identifier}",
+                thumbnail_url=thumbnail_url,
+                source_url=canonical_url,
+                article_url=ref.get("article_url") or "",
+                article_title=ref.get("article_title") or "",
+                byline=clean_byline(ref.get("byline") or ""),
+                article_authors=_split_authors(ref.get("byline") or ""),
+                description=description,
+                text="HTML bundle",
+            )
+        )
+
+    records.sort(key=lambda g: (g.date or "￿", g.title, g.id))
+    return records
+
+
+def _load_uploaded_html_graphic_rows(log_path: Path) -> dict[str, dict[str, str]]:
+    """Return uploaded ai2html/embed rows keyed by IA item identifier."""
+    out: dict[str, dict[str, str]] = {}
+    with log_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            ident = (row.get("identifier") or "").strip()
+            if ident and (row.get("status") or "") == "uploaded":
+                out[ident] = row
+    return out
+
+
+def _load_html_graphic_article_meta(
+    *,
+    ai2html_refs_path: Path,
+    embed_refs_path: Path,
+    enriched_path: Path,
+) -> dict[str, dict[str, str]]:
+    """Join ai2html/embed references to article metadata for display/search."""
+    article_by_file = _load_article_meta_by_file(enriched_path)
+    out: dict[str, dict[str, str]] = {}
+
+    for path, bundle_kind in (
+        (ai2html_refs_path, "ai2html"),
+        (embed_refs_path, "embed"),
+    ):
+        if not path.exists():
+            continue
+        with path.open(newline="", encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                ident = (row.get("identifier") or "").strip()
+                if not ident:
+                    continue
+                article = article_by_file.get(row.get("article_file") or "", {})
+                rec = {
+                    "bundle_kind": bundle_kind,
+                    "canonical_url": row.get("canonical_url") or "",
+                    "title": row.get("title") or "",
+                    "caption": row.get("caption") or "",
+                    "article_url": article.get("wayback_url")
+                    or row.get("article_url")
+                    or article.get("url")
+                    or "",
+                    "article_title": article.get("title") or "",
+                    "byline": article.get("byline") or "",
+                    "published_at": article.get("published_at") or "",
+                }
+                prev = out.get(ident)
+                if prev is None or _graphic_meta_score(rec) > _graphic_meta_score(prev):
+                    out[ident] = rec
+
+    return out
+
+
+def _load_article_meta_by_file(enriched_path: Path) -> dict[str, dict[str, str]]:
+    if not enriched_path.exists():
+        return {}
+
+    import hashlib
+
+    out: dict[str, dict[str, str]] = {}
+    with enriched_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            url = (row.get("url") or "").strip()
+            ts = (row.get("snapshot_timestamp") or "").strip()
+            if not url or not ts:
+                continue
+            year = ts[:4]
+            uhash = hashlib.sha1(
+                url.encode("utf-8"), usedforsecurity=False
+            ).hexdigest()[:16]
+            out[f"data/articles/{year}/{uhash}.html.gz"] = row
+    return out
+
+
+def _split_upload_files(value: str) -> list[str]:
+    return [part.strip() for part in value.split(";") if part.strip()]
+
+
+def _html_graphic_title(ref: dict[str, str], canonical_url: str) -> str:
+    if ref.get("title") and ref.get("article_title"):
+        return f"{ref['title'].title()} — {ref['article_title']}"[:200]
+    for candidate in (
+        ref.get("title"),
+        ref.get("caption"),
+        ref.get("article_title"),
+        _title_from_url(canonical_url),
+    ):
+        value = (candidate or "").strip()
+        if len(value) > 3:
+            return value[:200]
+    return "Untitled HTML graphic"
+
+
+def _html_graphic_category(ref: dict[str, str], canonical_url: str) -> str:
+    haystack = " ".join(
+        [
+            ref.get("title") or "",
+            ref.get("caption") or "",
+            ref.get("article_title") or "",
+            canonical_url,
+        ]
+    ).lower()
+    if any(term in haystack for term in ("map", "maps", "choropleth")):
+        return "map"
+    if any(term in haystack for term in ("table", "rankings", "ranking")):
+        return "table"
+    if any(
+        term in haystack
+        for term in (
+            "chart",
+            "plot",
+            "histogram",
+            "probability",
+            "forecast",
+            "trend",
+            "scatter",
+        )
+    ):
+        return "chart"
+    return "infographic"
+
+
+def _load_uploaded_image_rows(log_path: Path) -> dict[str, dict[str, str]]:
+    """Return uploaded image rows keyed by IA item identifier."""
+    out: dict[str, dict[str, str]] = {}
+    with log_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            ident = (row.get("identifier") or "").strip()
+            if ident and (row.get("status") or "") == "uploaded":
+                out[ident] = row
+    return out
+
+
+def _load_image_rows(image_log_path: Path) -> dict[str, dict[str, str]]:
+    if not image_log_path.exists():
+        return {}
+    out: dict[str, dict[str, str]] = {}
+    with image_log_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            ident = (row.get("identifier") or "").strip()
+            if ident:
+                out[ident] = row
+    return out
+
+
+def _load_graphic_captions(captions_path: Path) -> dict[str, dict[str, str]]:
+    if not captions_path.exists():
+        return {}
+    out: dict[str, dict[str, str]] = {}
+    with captions_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            ident = (row.get("identifier") or "").strip()
+            if not ident or (row.get("status") or "") != "ok":
+                continue
+            category = infer_caption_category(
+                row.get("ai_category") or "",
+                title=row.get("ai_title") or "",
+                description=row.get("ai_description") or "",
+                text=row.get("ai_text") or "",
+            )
+            out[ident] = {
+                "ai_category": category,
+                "ai_title": row.get("ai_title") or "",
+                "ai_description": row.get("ai_description") or "",
+                "ai_text": row.get("ai_text") or "",
+            }
+    return out
+
+
+def _load_graphic_article_meta(
+    refs_path: Path, enriched_path: Path
+) -> dict[str, dict[str, str]]:
+    """Join image references to the article metadata used for display/search."""
+    if not refs_path.exists():
+        return {}
+    article_by_file: dict[str, dict[str, str]] = {}
+    if enriched_path.exists():
+        import hashlib
+
+        with enriched_path.open(newline="", encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                url = (row.get("url") or "").strip()
+                ts = (row.get("snapshot_timestamp") or "").strip()
+                if not url or not ts:
+                    continue
+                year = ts[:4]
+                uhash = hashlib.sha1(
+                    url.encode("utf-8"), usedforsecurity=False
+                ).hexdigest()[:16]
+                article_by_file[f"data/articles/{year}/{uhash}.html.gz"] = row
+
+    out: dict[str, dict[str, str]] = {}
+    with refs_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            ident = (row.get("identifier") or "").strip()
+            if not ident:
+                continue
+            article = article_by_file.get(row.get("article_file") or "", {})
+            rec = {
+                "category": row.get("category") or "",
+                "alt": row.get("alt") or "",
+                "caption": row.get("caption") or "",
+                "article_url": article.get("wayback_url")
+                or row.get("article_url")
+                or article.get("url")
+                or "",
+                "article_title": article.get("title") or "",
+                "byline": article.get("byline") or "",
+                "published_at": article.get("published_at") or "",
+            }
+            prev = out.get(ident)
+            if prev is None or _graphic_meta_score(rec) > _graphic_meta_score(prev):
+                out[ident] = rec
+    return out
+
+
+def _graphic_meta_score(rec: dict[str, str]) -> tuple[int, int, int, int]:
+    return (
+        len(rec.get("caption") or ""),
+        1 if rec.get("article_title") else 0,
+        1 if rec.get("byline") else 0,
+        1 if rec.get("published_at") else 0,
+    )
+
+
+def _graphic_title(
+    caption: dict[str, str], ref: dict[str, str], canonical_url: str
+) -> str:
+    for candidate in (
+        caption.get("ai_title"),
+        ref.get("caption"),
+        ref.get("alt"),
+        _title_from_url(canonical_url),
+    ):
+        value = (candidate or "").strip()
+        if len(value) > 3:
+            return value[:200]
+    return "Untitled graphic"
 
 
 #: Title prefixes that mean "this row is sandbox/junk content the CMS
@@ -969,6 +1577,8 @@ def _write_sitemap(
         f"{SITE_BASE_URL}/",
         f"{SITE_BASE_URL}/byline/",
         f"{SITE_BASE_URL}/dataset/",
+        f"{SITE_BASE_URL}/graphics/",
+        f"{SITE_BASE_URL}/illustrations/",
         f"{SITE_BASE_URL}/podcast/",
     ]
     urls.extend(f"{SITE_BASE_URL}/year/{y}/" for y in sorted(years))

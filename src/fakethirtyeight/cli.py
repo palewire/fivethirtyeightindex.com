@@ -8,16 +8,21 @@ from pathlib import Path
 import click
 
 from fakethirtyeight import __version__
+from fakethirtyeight import ai2html as ai2html_mod
+from fakethirtyeight import ai2html_review as ai2html_review_mod
 from fakethirtyeight import articles as articles_mod
 from fakethirtyeight import caption as caption_mod
+from fakethirtyeight import caption_review as caption_review_mod
 from fakethirtyeight import crawl as crawl_mod
 from fakethirtyeight import curate as curate_mod
 from fakethirtyeight import datasets as datasets_mod
 from fakethirtyeight import download_podcasts as download_podcasts_mod
 from fakethirtyeight import duplicates as duplicates_mod
+from fakethirtyeight import embeds as embeds_mod
 from fakethirtyeight import enrich as enrich_mod
 from fakethirtyeight import export as export_mod
 from fakethirtyeight import feeds as feeds_mod
+from fakethirtyeight import ia_html_upload as ia_html_upload_mod
 from fakethirtyeight import ia_image_upload as ia_image_upload_mod
 from fakethirtyeight import ia_upload as ia_upload_mod
 from fakethirtyeight import images as images_mod
@@ -433,6 +438,159 @@ def download_images_cli(workers: int, limit: int | None) -> None:
     )
 
 
+@cli.command("extract-ai2html")
+def extract_ai2html() -> None:
+    """Walk downloaded articles and write ai2html references CSV.
+
+    Reads data/articles/**/*.html.gz, finds inline ai2html blocks and
+    ABC-era pym ai2html embeds, and writes data/ai2html_references.csv.
+    """
+    n = ai2html_mod.extract_references()
+    click.echo(f"wrote {n:,} ai2html references to {ai2html_mod.AI2HTML_REFS_FILE}")
+
+
+@cli.command("download-ai2html")
+@click.option("--workers", type=int, default=8, show_default=True)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many ai2html files to fetch (smoke testing).",
+)
+def download_ai2html_cli(workers: int, limit: int | None) -> None:
+    """Save every referenced ai2html graphic as local HTML.
+
+    Reads data/ai2html_references.csv (run `extract-ai2html` first),
+    deduplicates by canonical URL, and saves to
+    data/ai2html/<aa>/<sha1>.html. Resumable via
+    data/ai2html_download_log.csv.
+    """
+    ok, skipped, failed = ai2html_mod.download_ai2html(workers=workers, limit=limit)
+    click.echo(
+        f"downloaded: {ok:,}\nskipped:    {skipped:,}\nfailed:     {failed:,}\n"
+        f"\nfiles: {ai2html_mod.AI2HTML_DIR}\nlog:   {ai2html_mod.AI2HTML_LOG}"
+    )
+
+
+@cli.command("render-ai2html")
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many ai2html screenshots to render (smoke testing).",
+)
+@click.option("--width", type=int, default=1000, show_default=True)
+@click.option("--height", type=int, default=4096, show_default=True)
+@click.option("--timeout", type=int, default=60, show_default=True)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Re-render already completed ai2html screenshots.",
+)
+def render_ai2html_cli(
+    limit: int | None,
+    width: int,
+    height: int,
+    timeout: int,
+    force: bool,
+) -> None:
+    """Render downloaded ai2html graphics to desktop PNG screenshots.
+
+    Reads data/ai2html_download_log.csv (run `download-ai2html` first)
+    and saves PNG previews to data/ai2html_renders. Resumable via
+    data/ai2html_render_log.csv.
+    """
+    ok, skipped, failed = ai2html_mod.render_ai2html(
+        limit=limit,
+        width=width,
+        height=height,
+        timeout=timeout,
+        force=force,
+    )
+    click.echo(
+        f"rendered: {ok:,}\nskipped:  {skipped:,}\nfailed:   {failed:,}\n"
+        f"\nfiles: {ai2html_mod.AI2HTML_RENDER_DIR}\n"
+        f"log:   {ai2html_mod.AI2HTML_RENDER_LOG}"
+    )
+
+
+@cli.command("review-ai2html-renders")
+def review_ai2html_renders() -> None:
+    """Build a local HTML report for reviewing ai2html render quality."""
+    n = ai2html_review_mod.build_review()
+    click.echo(f"wrote {n:,} rows to {ai2html_review_mod.REVIEW_FILE}")
+
+
+@cli.command("extract-embeds")
+def extract_embeds() -> None:
+    """Walk downloaded articles and write non-ai2html embed references CSV.
+
+    Reads data/articles/**/*.html.gz, finds project-style pym and iframe HTML
+    embeds, excludes ai2html references, and writes data/embed_references.csv.
+    """
+    n = embeds_mod.extract_references()
+    click.echo(f"wrote {n:,} embed references to {embeds_mod.EMBED_REFS_FILE}")
+
+
+@cli.command("download-embeds")
+@click.option("--workers", type=int, default=4, show_default=True)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many embed HTML files to fetch (smoke testing).",
+)
+def download_embeds_cli(workers: int, limit: int | None) -> None:
+    """Save every referenced non-ai2html HTML embed as local HTML.
+
+    Reads data/embed_references.csv (run `extract-embeds` first),
+    deduplicates by canonical URL, and saves to data/embeds.
+    Resumable via data/embed_download_log.csv.
+    """
+    ok, skipped, failed = embeds_mod.download_embeds(workers=workers, limit=limit)
+    click.echo(
+        f"downloaded: {ok:,}\nskipped:    {skipped:,}\nfailed:     {failed:,}\n"
+        f"\nfiles: {embeds_mod.EMBED_DIR}\nlog:   {embeds_mod.EMBED_LOG}"
+    )
+
+
+@cli.command("render-embeds")
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many embed screenshots to render (smoke testing).",
+)
+@click.option("--width", type=int, default=1000, show_default=True)
+@click.option("--height", type=int, default=4096, show_default=True)
+@click.option("--timeout", type=int, default=60, show_default=True)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Re-render already completed embed screenshots.",
+)
+def render_embeds_cli(
+    limit: int | None,
+    width: int,
+    height: int,
+    timeout: int,
+    force: bool,
+) -> None:
+    """Render downloaded non-ai2html embeds to desktop PNG screenshots."""
+    ok, skipped, failed = embeds_mod.render_embeds(
+        limit=limit,
+        width=width,
+        height=height,
+        timeout=timeout,
+        force=force,
+    )
+    click.echo(
+        f"rendered: {ok:,}\nskipped:  {skipped:,}\nfailed:   {failed:,}\n"
+        f"\nfiles: {embeds_mod.EMBED_RENDER_DIR}\n"
+        f"log:   {embeds_mod.EMBED_RENDER_LOG}"
+    )
+
+
 @cli.command("caption-images")
 @click.option("--workers", type=int, default=4, show_default=True)
 @click.option(
@@ -454,7 +612,14 @@ def download_images_cli(workers: int, limit: int | None) -> None:
     show_default=True,
     help="LiteLLM model to use for classification.",
 )
-def caption_images(workers: int, limit: int | None, do_all: bool, model: str) -> None:
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Recaption already successful rows and append newer results.",
+)
+def caption_images(
+    workers: int, limit: int | None, do_all: bool, model: str, force: bool
+) -> None:
     """Use LiteLLM vision to classify ambiguous images.
 
     For each target image, asks the vision model to return a content category,
@@ -469,10 +634,18 @@ def caption_images(workers: int, limit: int | None, do_all: bool, model: str) ->
         limit=limit,
         only_screenshots=not do_all,
         model=model,
+        force=force,
     )
     click.echo(
         f"captioned: {ok:,}\nfailed:    {failed:,}\n\nlog: {caption_mod.CAPTIONS_FILE}"
     )
+
+
+@cli.command("review-image-captions")
+def review_image_captions() -> None:
+    """Build a local HTML report for reviewing image caption choices."""
+    n = caption_review_mod.build_review()
+    click.echo(f"wrote {n:,} rows to {caption_review_mod.REVIEW_FILE}")
 
 
 @cli.command("upload-images")
@@ -485,6 +658,76 @@ def caption_images(workers: int, limit: int | None, do_all: bool, model: str) ->
 @click.option(
     "--contributor",
     default=ia_image_upload_mod.DEFAULT_CONTRIBUTOR,
+    show_default=True,
+    help="Person archiving these items (sets the `contributor` field).",
+)
+@click.option(
+    "--delay",
+    type=float,
+    default=0.5,
+    show_default=True,
+    help="Seconds to sleep between item uploads when --workers=1.",
+)
+@click.option(
+    "--workers",
+    type=int,
+    default=1,
+    show_default=True,
+    help="Concurrent upload workers.",
+)
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Cap how many items to upload (smoke testing).",
+)
+@click.option(
+    "--dry-run/--no-dry-run",
+    default=False,
+    help="Log what would happen without hitting archive.org.",
+)
+def upload_images(
+    collection: str,
+    contributor: str,
+    delay: float,
+    workers: int,
+    limit: int | None,
+    dry_run: bool,
+) -> None:
+    """Upload each downloaded article image to archive.org as a standalone item.
+
+    Reads data/image_download_log.csv (run `download-images` first),
+    joins data/image_references.csv + data/enriched.csv for metadata
+    (alt/caption/article title/byline/date), and uploads one IA item
+    per image. Resumable via data/image_upload_log.csv.
+
+    Items default to the curated FiveThirtyEight collection. Requires
+    IA_ACCESS_KEY + IA_SECRET_KEY.
+    """
+    uploaded, skipped, failed = ia_image_upload_mod.upload_images(
+        collection=collection,
+        contributor=contributor,
+        delay=delay,
+        workers=workers,
+        limit=limit,
+        dry_run=dry_run,
+    )
+    click.echo(
+        f"uploaded: {uploaded:,}\nskipped:  {skipped:,}\nfailed:   {failed:,}\n"
+        f"\nlog: {ia_image_upload_mod.UPLOAD_LOG}"
+    )
+
+
+@cli.command("upload-html-graphics")
+@click.option(
+    "--collection",
+    default=ia_html_upload_mod.DEFAULT_COLLECTION,
+    show_default=True,
+    help="archive.org collection slug to upload into.",
+)
+@click.option(
+    "--contributor",
+    default=ia_html_upload_mod.DEFAULT_CONTRIBUTOR,
     show_default=True,
     help="Person archiving these items (sets the `contributor` field).",
 )
@@ -506,24 +749,22 @@ def caption_images(workers: int, limit: int | None, do_all: bool, model: str) ->
     default=False,
     help="Log what would happen without hitting archive.org.",
 )
-def upload_images(
+def upload_html_graphics(
     collection: str,
     contributor: str,
     delay: float,
     limit: int | None,
     dry_run: bool,
 ) -> None:
-    """Upload each downloaded article image to archive.org as a standalone item.
+    """Upload rendered ai2html/embed bundles to archive.org.
 
-    Reads data/image_download_log.csv (run `download-images` first),
-    joins data/image_references.csv + data/enriched.csv for metadata
-    (alt/caption/article title/byline/date), and uploads one IA item
-    per image. Resumable via data/image_upload_log.csv.
+    Uploads the rendered PNG first so it acts as the item thumbnail/lead
+    image, then uploads the extracted HTML source as the preserved bundle.
+    Resumable via data/html_graphic_upload_log.csv.
 
-    Items default to the curated FiveThirtyEight collection. Requires
-    IA_ACCESS_KEY + IA_SECRET_KEY.
+    Requires IA_ACCESS_KEY + IA_SECRET_KEY unless --dry-run is used.
     """
-    uploaded, skipped, failed = ia_image_upload_mod.upload_images(
+    uploaded, skipped, failed = ia_html_upload_mod.upload_html_graphics(
         collection=collection,
         contributor=contributor,
         delay=delay,
@@ -532,7 +773,7 @@ def upload_images(
     )
     click.echo(
         f"uploaded: {uploaded:,}\nskipped:  {skipped:,}\nfailed:   {failed:,}\n"
-        f"\nlog: {ia_image_upload_mod.UPLOAD_LOG}"
+        f"\nlog: {ia_html_upload_mod.UPLOAD_LOG}"
     )
 
 

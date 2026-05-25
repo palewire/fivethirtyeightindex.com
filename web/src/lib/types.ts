@@ -37,3 +37,20 @@ export interface Podcast {
 	series_slug: string;
 	url: string;
 }
+
+export interface Graphic {
+	id: string;
+	title: string;
+	date: string;
+	year: number | null;
+	category: string;
+	url: string;
+	thumbnail_url: string;
+	source_url: string;
+	article_url: string;
+	article_title: string;
+	byline: string;
+	article_authors?: string[];
+	description: string;
+	text: string;
+}

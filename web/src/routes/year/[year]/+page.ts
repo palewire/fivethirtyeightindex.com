@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { loadEntries } from '$lib/data';
-import type { PageLoad, EntryGenerator } from './$types';
+import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ params, fetch }) => {
 	const yearNum = Number(params.year);
@@ -14,10 +14,4 @@ export const load: PageLoad = async ({ params, fetch }) => {
 	}
 	const months = cache.monthsByYear.get(yearNum) ?? [];
 	return { year: yearNum, entries, months };
-};
-
-export const entries: EntryGenerator = async () => {
-	// SvelteKit prerender needs to know which dynamic routes exist.
-	const cache = await loadEntries();
-	return cache.years.map((y) => ({ year: String(y) }));
 };

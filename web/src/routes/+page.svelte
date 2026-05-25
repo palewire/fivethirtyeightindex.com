@@ -4,6 +4,7 @@
 		BylineTeaser,
 		DatasetTeaser,
 		EntryList,
+		GraphicsTeaser,
 		PodcastTeaser,
 		SearchBox,
 		YearList
@@ -49,7 +50,7 @@
 	<title>fivethirtyeightindex</title>
 </svelte:head>
 
-<SearchBox bind:value={query} placeholder="Search title or byline…" oninput={runSearch} />
+<SearchBox bind:value={query} placeholder="Search articles by title or byline…" oninput={runSearch} />
 
 {#if searched}
 	{#if results.length === 0}
@@ -69,4 +70,12 @@
 	<BylineTeaser bylines={data.topBylines} total={data.totalBylines} />
 	<PodcastTeaser series={data.podcastSeries} total={data.totalPodcasts} />
 	<DatasetTeaser datasets={data.datasets} total={data.totalDatasets} />
+	<GraphicsTeaser graphics={data.graphics} total={data.totalGraphics} />
+	<GraphicsTeaser
+		graphics={data.illustrations}
+		total={data.totalIllustrations}
+		title="Illustrations"
+		href="/illustrations/"
+		label="illustrations"
+	/>
 {/if}

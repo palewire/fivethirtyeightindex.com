@@ -3,7 +3,8 @@
 </script>
 
 <footer>
-	Created by <a href="https://palewi.re/">Ben Welsh</a>.
+	Created by <a href="https://palewi.re/">Ben Welsh</a>. Preserved by the
+	<a href="https://archive.org/" rel="noopener external" target="_blank">Internet Archive</a>.
 	<a href="{base}/data/articles.csv">Download the full index as CSV</a>. Open source on
 	<a
 		href="https://github.com/palewire/fivethirtyeightindex.com"

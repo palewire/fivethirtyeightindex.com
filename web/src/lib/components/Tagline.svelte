@@ -6,7 +6,8 @@
 </script>
 
 <p>
-	Explore {total.toLocaleString()} pages from fivethirtyeight.com preserved by the Internet Archive
+	Explore {total.toLocaleString()} articles, datasets, podcasts, graphics and illustrations from
+	fivethirtyeight.com
 </p>
 
 <style>

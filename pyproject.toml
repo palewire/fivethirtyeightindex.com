@@ -14,6 +14,7 @@ dependencies = [
     "internetarchive>=5.8.0",
     "lxml",
     "mutagen>=1.47.0",
+    "pillow",
     "python-dotenv",
     "tenacity",
     "tqdm",
