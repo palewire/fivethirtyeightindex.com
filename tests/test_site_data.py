@@ -501,7 +501,7 @@ def test_load_site_graphics_joins_uploaded_items_to_caption_metadata(
     assert graphics[0].year == 2017
     assert graphics[0].url == "https://archive.org/details/fivethirtyeight-image-chart"
     assert graphics[0].thumbnail_url == (
-        "https://archive.org/services/img/fivethirtyeight-image-chart"
+        "https://thumbs.fivethirtyeightindex.com/fivethirtyeight-image-chart"
     )
     assert graphics[0].article_url == wayback_url
     assert graphics[0].article_title == "Example chart article"
@@ -604,7 +604,7 @@ def test_load_site_graphics_includes_uploaded_html_bundles(tmp_path: Path) -> No
         "https://archive.org/details/fivethirtyeight-ai2html-example"
     )
     assert graphics[0].thumbnail_url == (
-        "https://archive.org/services/img/fivethirtyeight-ai2html-example"
+        "https://thumbs.fivethirtyeightindex.com/fivethirtyeight-ai2html-example"
     )
     assert graphics[0].source_url == "https://example.com/graphic.html"
     assert graphics[0].article_url == wayback_url

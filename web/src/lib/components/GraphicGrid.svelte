@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import { categoryLabel, graphicCategoryGroup, slugify } from '$lib/data';
+	import { thumbnailUrl } from '$lib/thumbnail';
 	import type { Graphic } from '$lib/types';
 
 	interface Props {
@@ -42,7 +43,7 @@
 				{#if graphic.thumbnail_url}
 					<img
 						class:cover={imageFit === 'cover'}
-						src={graphic.thumbnail_url}
+						src={thumbnailUrl(graphic.thumbnail_url)}
 						alt={graphic.description || graphic.title}
 						loading="lazy"
 					/>

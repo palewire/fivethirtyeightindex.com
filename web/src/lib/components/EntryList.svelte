@@ -40,6 +40,17 @@
 		return displayByline(entry);
 	}
 
+	function compareDateValues(left: string, right: string): number {
+		const leftMissing = left.length === 0;
+		const rightMissing = right.length === 0;
+		if (leftMissing && rightMissing) return 0;
+		if (leftMissing) return 1;
+		if (rightMissing) return -1;
+
+		const order = left.localeCompare(right);
+		return sortDirection === 'asc' ? order : -order;
+	}
+
 	function toggleSort(key: SortKey): void {
 		if (sortKey === key) {
 			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
@@ -64,10 +75,11 @@
 			value: sortValue(entry, activeSort)
 		}));
 		decorated.sort((left, right) => {
-			const order =
-				activeSort === 'date'
-					? left.value.localeCompare(right.value)
-					: textCollator.compare(left.value, right.value);
+			if (activeSort === 'date') {
+				return compareDateValues(left.value, right.value);
+			}
+
+			const order = textCollator.compare(left.value, right.value);
 			return sortDirection === 'asc' ? order : -order;
 		});
 		return decorated.map(({ entry }) => entry);

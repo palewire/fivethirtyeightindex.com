@@ -2,6 +2,7 @@
 
 # AI stuff
 .claude
+.wrangler/
 
 # Crawl output (only the top-level data/ directory, not e.g. web/static/data/).
 # Keep the slow-to-regenerate Wayback enrichment + feed-derived metadata

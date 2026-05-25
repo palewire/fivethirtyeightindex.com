@@ -66,7 +66,7 @@ PODCAST_UPLOAD_LOG = DATA_DIR / "podcast_upload_log.csv"
 IMAGE_UPLOAD_LOG = DATA_DIR / "image_upload_log.csv"
 HTML_GRAPHIC_UPLOAD_LOG = DATA_DIR / "html_graphic_upload_log.csv"
 ARCHIVE_ITEM_BASE_URL = "https://archive.org/details"
-ARCHIVE_THUMBNAIL_BASE_URL = "https://archive.org/services/img"
+THUMBNAIL_CACHE_BASE_URL = "https://thumbs.fivethirtyeightindex.com"
 HTML_GRAPHIC_CATEGORY = "html-bundle"
 SITE_GRAPHIC_CATEGORIES = frozenset(
     ["chart", "map", "table", "chart-screenshot", "infographic"]
@@ -263,8 +263,8 @@ class GraphicRecord:
 
 
 def _archive_thumbnail_url(identifier: str) -> str:
-    """Archive.org-generated thumbnail URL for an uploaded item."""
-    return f"{ARCHIVE_THUMBNAIL_BASE_URL}/{identifier}"
+    """Cloudflare-cached Archive.org thumbnail URL for an uploaded item."""
+    return f"{THUMBNAIL_CACHE_BASE_URL}/{identifier}"
 
 
 def build(

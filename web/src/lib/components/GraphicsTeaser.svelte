@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import { thumbnailUrl } from '$lib/thumbnail';
 	import type { Graphic } from '$lib/types';
 
 	interface Props {
@@ -21,7 +22,11 @@
 			{#each rail as graphic, i (`${graphic.id}-${i}`)}
 				<a class="tile" href={graphic.url} rel="noopener external" target="_blank">
 					{#if graphic.thumbnail_url}
-						<img src={graphic.thumbnail_url} alt={graphic.description || graphic.title} loading="lazy" />
+						<img
+							src={thumbnailUrl(graphic.thumbnail_url)}
+							alt={graphic.description || graphic.title}
+							loading="lazy"
+						/>
 					{:else}
 						<span>{graphic.category}</span>
 					{/if}

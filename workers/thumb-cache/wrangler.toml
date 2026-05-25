@@ -1,0 +1,8 @@
+name = "fivethirtyeight-thumb-cache"
+main = "src/index.js"
+compatibility_date = "2026-05-25"
+workers_dev = false
+
+routes = [
+  { pattern = "thumbs.fivethirtyeightindex.com", custom_domain = true },
+]
