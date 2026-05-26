@@ -11,6 +11,7 @@ from fakethirtyeight import __version__
 from fakethirtyeight import ai2html as ai2html_mod
 from fakethirtyeight import ai2html_review as ai2html_review_mod
 from fakethirtyeight import articles as articles_mod
+from fakethirtyeight import backup as backup_mod
 from fakethirtyeight import caption as caption_mod
 from fakethirtyeight import caption_review as caption_review_mod
 from fakethirtyeight import crawl as crawl_mod
@@ -1072,6 +1073,38 @@ def export(fmt: str, out_path: Path) -> None:
     else:
         count = export_mod.to_parquet(out_path)
     click.echo(f"wrote {count:,} rows to {out_path}")
+
+
+@cli.command("backup-bundle")
+@click.option(
+    "--out-dir",
+    type=click.Path(path_type=Path),
+    required=True,
+    help="Directory where the manifest and archive should be written.",
+)
+@click.option(
+    "--name",
+    default=None,
+    help="Base filename for outputs (default: timestamped fivethirtyeight-backup-*).",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Write manifests only; skip creating the compressed archive.",
+)
+def backup_bundle(out_dir: Path, name: str | None, dry_run: bool) -> None:
+    """Create a manifest and compressed archive of preservation artifacts."""
+    result = backup_mod.create_backup_bundle(out_dir, name=name, dry_run=dry_run)
+    click.echo(
+        f"manifested {result.file_count:,} files "
+        f"({result.total_bytes / 1024 / 1024 / 1024:.2f} GiB)"
+    )
+    click.echo(f"json: {result.manifest_json_path}")
+    click.echo(f"csv:  {result.manifest_csv_path}")
+    if result.archive_path:
+        click.echo(f"tar:  {result.archive_path}")
+    else:
+        click.echo("tar:  skipped (--dry-run)")
 
 
 @cli.group()
