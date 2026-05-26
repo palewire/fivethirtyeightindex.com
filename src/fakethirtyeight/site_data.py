@@ -20,6 +20,7 @@ finishes or new entries land.
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import logging
 import re
@@ -27,7 +28,7 @@ import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit, urlunsplit
 
 from fakethirtyeight.ai2html import AI2HTML_REFS_FILE
 from fakethirtyeight.caption import CAPTIONS_FILE, infer_caption_category
@@ -609,7 +610,8 @@ def _load_site_image_set(
     captions = _load_graphic_captions(captions_path)
     refs = _load_graphic_article_meta(refs_path, enriched_path)
 
-    records: list[GraphicRecord] = []
+    records_by_key: dict[str, GraphicRecord] = {}
+    records_without_key: list[GraphicRecord] = []
     for identifier, upload in uploaded.items():
         image = images.get(identifier, {})
         canonical_url = (
@@ -638,27 +640,92 @@ def _load_site_image_set(
         ).strip()
         thumbnail_url = _archive_thumbnail_url(identifier) if file_name else ""
         date = _normalize_site_date(ref.get("published_at") or "")
-        records.append(
-            GraphicRecord(
-                id=identifier,
-                title=title,
-                date=date,
-                year=_year_from_date(date),
-                category=category,
-                url=f"{ARCHIVE_ITEM_BASE_URL}/{identifier}",
-                thumbnail_url=thumbnail_url,
-                source_url=canonical_url,
-                article_url=ref.get("article_url") or "",
-                article_title=ref.get("article_title") or "",
-                byline=clean_byline(ref.get("byline") or ""),
-                article_authors=_split_authors(ref.get("byline") or ""),
-                description=description,
-                text=text,
-            )
+        record = GraphicRecord(
+            id=identifier,
+            title=title,
+            date=date,
+            year=_year_from_date(date),
+            category=category,
+            url=f"{ARCHIVE_ITEM_BASE_URL}/{identifier}",
+            thumbnail_url=thumbnail_url,
+            source_url=canonical_url,
+            article_url=ref.get("article_url") or "",
+            article_title=ref.get("article_title") or "",
+            byline=clean_byline(ref.get("byline") or ""),
+            article_authors=_split_authors(ref.get("byline") or ""),
+            description=description,
+            text=text,
         )
+        dedupe_key = _image_dedupe_key(image=image, canonical_url=canonical_url)
+        if not dedupe_key:
+            records_without_key.append(record)
+            continue
 
+        existing = records_by_key.get(dedupe_key)
+        if existing is None or _graphic_record_preference(record) > (
+            _graphic_record_preference(existing)
+        ):
+            records_by_key[dedupe_key] = record
+
+    records = [*records_by_key.values(), *records_without_key]
     records.sort(key=lambda g: (g.date or "￿", g.title, g.id))
     return records
+
+
+def _image_dedupe_key(*, image: dict[str, str], canonical_url: str) -> str:
+    """Return a stable frontend dedupe key for a static image record."""
+    file_digest = _image_file_sha256(image.get("file_path") or "")
+    if file_digest:
+        return f"sha256:{file_digest}"
+
+    normalized_url = _normalize_image_url_for_dedupe(canonical_url)
+    return f"url:{normalized_url}" if normalized_url else ""
+
+
+def _image_file_sha256(file_path: str) -> str:
+    path = Path(file_path)
+    if not file_path or not path.is_file():
+        return ""
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _normalize_image_url_for_dedupe(url: str) -> str:
+    value = url.strip()
+    if not value:
+        return ""
+    parsed = urlsplit(value)
+    raw_scheme = parsed.scheme.lower()
+    scheme = "https" if raw_scheme in {"http", "https"} else raw_scheme
+    host = (parsed.hostname or "").lower()
+    if host.startswith("www."):
+        host = host[4:]
+    try:
+        port = parsed.port
+    except ValueError:
+        port = None
+    if port and not (
+        (raw_scheme == "http" and port == 80) or (raw_scheme == "https" and port == 443)
+    ):
+        host = f"{host}:{port}"
+    return urlunsplit((scheme, host, parsed.path, "", ""))
+
+
+def _graphic_record_preference(record: GraphicRecord) -> tuple[int, ...]:
+    article_url = record.article_url.lower()
+    return (
+        1 if record.article_title else 0,
+        1 if record.byline else 0,
+        1 if record.date else 0,
+        1 if "/features/" in article_url else 0,
+        1 if record.source_url.startswith("https://") else 0,
+        len(record.description),
+        len(record.text),
+        len(record.title),
+    )
 
 
 def _is_excluded_illustration_icon(

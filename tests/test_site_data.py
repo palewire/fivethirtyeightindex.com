@@ -509,6 +509,130 @@ def test_load_site_graphics_joins_uploaded_items_to_caption_metadata(
     assert graphics[0].article_authors == ["Nate Silver"]
 
 
+def test_load_site_graphics_dedupes_identical_static_images(
+    tmp_path: Path,
+) -> None:
+    upload_log = tmp_path / "image_upload_log.csv"
+    image_log = tmp_path / "image_download_log.csv"
+    refs = tmp_path / "image_references.csv"
+    captions = tmp_path / "image_captions.csv"
+    http_image = tmp_path / "http-chart.png"
+    https_image = tmp_path / "https-chart.png"
+    http_image.write_bytes(b"same chart bytes")
+    https_image.write_bytes(b"same chart bytes")
+
+    _write_csv(
+        upload_log,
+        [
+            {
+                "identifier": "fivethirtyeight-image-http",
+                "canonical_url": "http://fivethirtyeight.com/wp-content/uploads/2014/05/chart.png",
+                "uploaded_at": "2026-05-22T00:00:00+00:00",
+                "status": "uploaded",
+                "file": "http-chart.png",
+                "error": "",
+            },
+            {
+                "identifier": "fivethirtyeight-image-https",
+                "canonical_url": "https://fivethirtyeight.com/wp-content/uploads/2014/05/chart.png",
+                "uploaded_at": "2026-05-22T00:00:01+00:00",
+                "status": "uploaded",
+                "file": "https-chart.png",
+                "error": "",
+            },
+        ],
+    )
+    _write_csv(
+        image_log,
+        [
+            {
+                "identifier": "fivethirtyeight-image-http",
+                "canonical_url": "http://fivethirtyeight.com/wp-content/uploads/2014/05/chart.png",
+                "file_path": str(http_image),
+                "bytes": "16",
+                "content_type": "image/png",
+                "fetched_via": "live",
+                "status": "ok",
+                "error": "",
+            },
+            {
+                "identifier": "fivethirtyeight-image-https",
+                "canonical_url": "https://fivethirtyeight.com/wp-content/uploads/2014/05/chart.png",
+                "file_path": str(https_image),
+                "bytes": "16",
+                "content_type": "image/png",
+                "fetched_via": "live",
+                "status": "ok",
+                "error": "",
+            },
+        ],
+    )
+    _write_csv(
+        refs,
+        [
+            {
+                "identifier": "fivethirtyeight-image-http",
+                "article_file": "",
+                "article_url": "http://www.fivethirtyeight.com/2014/05/example-chart.html",
+                "image_url": "http://fivethirtyeight.com/wp-content/uploads/2014/05/chart.png",
+                "canonical_url": "http://fivethirtyeight.com/wp-content/uploads/2014/05/chart.png",
+                "alt": "Original chart alt",
+                "caption": "Original chart caption",
+                "kind": "img",
+                "category": "screenshot",
+            },
+            {
+                "identifier": "fivethirtyeight-image-https",
+                "article_file": "",
+                "article_url": "https://fivethirtyeight.com/features/example-chart/",
+                "image_url": "https://fivethirtyeight.com/wp-content/uploads/2014/05/chart.png",
+                "canonical_url": "https://fivethirtyeight.com/wp-content/uploads/2014/05/chart.png",
+                "alt": "Original chart alt",
+                "caption": "Original chart caption",
+                "kind": "img",
+                "category": "screenshot",
+            },
+        ],
+    )
+    _write_csv(
+        captions,
+        [
+            {
+                "identifier": "fivethirtyeight-image-http",
+                "ai_category": "chart",
+                "ai_description": "A chart.",
+                "ai_title": "Example Chart",
+                "ai_text": "",
+                "model": "vision-model",
+                "status": "ok",
+                "error": "",
+            },
+            {
+                "identifier": "fivethirtyeight-image-https",
+                "ai_category": "chart",
+                "ai_description": "A chart.",
+                "ai_title": "Example Chart",
+                "ai_text": "",
+                "model": "vision-model",
+                "status": "ok",
+                "error": "",
+            },
+        ],
+    )
+
+    graphics = _load_site_graphics(
+        upload_log_path=upload_log,
+        html_upload_log_path=tmp_path / "missing-html-upload-log.csv",
+        image_log_path=image_log,
+        refs_path=refs,
+        enriched_path=tmp_path / "missing-enriched.csv",
+        captions_path=captions,
+    )
+
+    assert len(graphics) == 1
+    assert graphics[0].id == "fivethirtyeight-image-https"
+
+
 def test_write_site_graphics_accepts_missing_upload_log(tmp_path: Path) -> None:
     graphics = write_site_graphics(
         upload_log_path=tmp_path / "missing.csv",
